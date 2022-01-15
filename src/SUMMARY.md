@@ -4,5 +4,7 @@ pbrt-rust is a Rust implementation of the physically-based renderer described in
 
 I am writing them primarily to aid my own understanding, but also in the hope that other Rust/3D rendering initiates might find them useful
 
+[Introduction](introduction.md)
+
 - [Geometry and Transformations](chapter-1.md)
 - [Shapes](chapter-2.md)
