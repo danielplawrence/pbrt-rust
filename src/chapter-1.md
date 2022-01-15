@@ -1,3 +1,3 @@
-# Chapter 1
+# Geometry and Transformations
 
 Content goes here.

@@ -1,10 +1,8 @@
-# Summary
+# pbrt-rust
 
-Test!
+pbrt-rust is a Rust implementation of the physically-based renderer described in Pharr, Jakob and Humphreys (2004-2021), *Physically Based Rendering: From Theory To Implementation.* (https://pbr-book.org/). This book details step-by step implementation notes for building the renderer in Rust. 
 
-- [mdBook Quickstart](README.md)
-- [Chapter 1](chapter-1.md)
-- [Chapter 2](chapter-2.md)
-- [Foo](foo/README.md)
-    - [Fizz](foo/fizz.md)
-    - [Buzz](foo/buzz.md)
+I am writing them primarily to aid my own understanding, but also in the hope that other Rust/3D rendering initiates might find them useful
+
+- [Geometry and Transformations](chapter-1.md)
+- [Shapes](chapter-2.md)
