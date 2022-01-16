@@ -31,6 +31,8 @@
 
         <!-- Custom theme stylesheets -->
 
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     </head>
     <body>
         <!-- Provide site root to javascript -->
@@ -81,7 +83,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="chapter-1.html" class="active"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li class="chapter-item expanded "><a href="chapter-2.html"><strong aria-hidden="true">2.</strong> Shapes</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="geometry_and_transformations.html" class="active"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="geometry_vectors.html"><strong aria-hidden="true">1.1.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="geometry_points.html"><strong aria-hidden="true">1.2.</strong> Points</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -143,7 +145,11 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="geometry-and-transformations"><a class="header" href="#geometry-and-transformations">Geometry and Transformations</a></h1>
-<p>Content goes here.</p>
+<p>In order to generate 3D images, we need a way of representing fundamental geometric concepts such as vectors, points and rays. This section introduces the mathematics behind these concepts and their implementation in <code>pbrt-rust</code>.</p>
+<ul>
+<li><a href="geometry_vectors.html">Vectors</a></li>
+<li><a href="geometry_points.html">Points</a></li>
+</ul>
 
                     </main>
 
@@ -153,7 +159,7 @@
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="chapter-2.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="geometry_vectors.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -167,7 +173,7 @@
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="chapter-2.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="geometry_vectors.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

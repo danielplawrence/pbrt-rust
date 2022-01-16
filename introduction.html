@@ -31,6 +31,8 @@
 
         <!-- Custom theme stylesheets -->
 
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     </head>
     <body>
         <!-- Provide site root to javascript -->
@@ -81,7 +83,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html" class="active">Introduction</a></li><li class="chapter-item expanded "><a href="chapter-1.html"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li class="chapter-item expanded "><a href="chapter-2.html"><strong aria-hidden="true">2.</strong> Shapes</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html" class="active">Introduction</a></li><li class="chapter-item expanded "><a href="geometry_and_transformations.html"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="geometry_vectors.html"><strong aria-hidden="true">1.1.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="geometry_points.html"><strong aria-hidden="true">1.2.</strong> Points</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -142,14 +144,16 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+                        <h1 id="pbrt-rust"><a class="header" href="#pbrt-rust">pbrt-rust</a></h1>
+<p>pbrt-rust is a Rust implementation of the physically-based renderer described in Pharr, Jakob and Humphreys (2004-2021), <em>Physically Based Rendering: From Theory To Implementation.</em> (https://pbr-book.org/). This book details step-by step implementation notes for building the renderer in Rust. </p>
+<p>I am writing them primarily to aid my own understanding, but also in the hope that other Rust/3D rendering initiates might find them useful.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
 
-                            <a rel="next" href="chapter-1.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="geometry_and_transformations.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -160,7 +164,7 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
 
-                    <a rel="next" href="chapter-1.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="geometry_and_transformations.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

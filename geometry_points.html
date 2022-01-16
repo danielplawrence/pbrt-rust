@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Shapes - pbrt-rust</title>
+        <title>Points - pbrt-rust</title>
 
 
         <!-- Custom HTML head -->
@@ -31,6 +31,8 @@
 
         <!-- Custom theme stylesheets -->
 
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     </head>
     <body>
         <!-- Provide site root to javascript -->
@@ -81,7 +83,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="chapter-1.html"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li class="chapter-item expanded "><a href="chapter-2.html" class="active"><strong aria-hidden="true">2.</strong> Shapes</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="geometry_and_transformations.html"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="geometry_vectors.html"><strong aria-hidden="true">1.1.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="geometry_points.html" class="active"><strong aria-hidden="true">1.2.</strong> Points</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -142,13 +144,14 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="shapes"><a class="header" href="#shapes">Shapes</a></h1>
+                        <h1 id="geometry-and-transformations"><a class="header" href="#geometry-and-transformations">Geometry and Transformations</a></h1>
+<h2 id="12-points"><a class="header" href="#12-points">1.2 Points</a></h2>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="chapter-1.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="geometry_vectors.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -159,7 +162,7 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="chapter-1.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="geometry_vectors.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
