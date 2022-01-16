@@ -5,3 +5,5 @@ multilingual = false
 src = "src"
 title = "pbrt-rust"
 description = "Implementation notes for a physically-based renderer in Rust"
+[output.html]
+mathjax-support = true
