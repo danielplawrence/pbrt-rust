@@ -350,11 +350,15 @@ fn test_vector_2d_normalized() {
 fn test_vector_2d_min_component() {
     let v = Vector2d::new(1.0, 2.0);
     assert_eq!(v.min_component(), 1.0);
+    let v2 = Vector2d::new(2.0, 1.0);
+    assert_eq!(v2.min_component(), 1.0);
 }
 #[test]
 fn test_vector_2d_max_component() {
     let v = Vector2d::new(1.0, 2.0);
     assert_eq!(v.max_component(), 2.0);
+    let v2 = Vector2d::new(2.0, 1.0);
+    assert_eq!(v2.max_component(), 2.0);
 }
 #[test]
 fn test_vector_2d_min() {
@@ -381,6 +385,8 @@ fn test_vector_2d_permute() {
 fn test_vector_2d_max_dimension() {
     let v = Vector2d::new(1.0, 2.0);
     assert_eq!(v.max_dimension(), 1);
+    let v2 = Vector2d::new(2.0, 1.0);
+    assert_eq!(v2.max_dimension(), 0);
 }
 #[test]
 fn test_vector_3d() {
@@ -504,11 +510,20 @@ fn test_vector_3d_normalized() {
 fn test_vector_3d_min_component() {
     let v = Vector3d::new(1.0, 2.0, 3.0);
     assert_eq!(v.min_component(), 1.0);
+    let v2 = Vector3d::new(2.0, 1.0, 3.0);
+    assert_eq!(v2.min_component(), 1.0);
+    let v3 = Vector3d::new(2.0, 3.0, 1.0);
+    assert_eq!(v3.min_component(), 1.0);
 }
 #[test]
 fn test_vector_3d_max_component() {
     let v = Vector3d::new(1.0, 2.0, 3.0);
     assert_eq!(v.max_component(), 3.0);
+    let v2 = Vector3d::new(2.0, 3.0, 1.0);
+    assert_eq!(v2.max_component(), 3.0);
+    let v3 = Vector3d::new(3.0, 2.0, 1.0);
+    assert_eq!(v3.max_component(), 3.0);
+
 }
 #[test]
 fn test_vector_3d_min() {
@@ -536,6 +551,10 @@ fn test_vector_3d_permute() {
 fn test_vector_3d_max_dimension() {
     let v = Vector3d::new(1.0, 2.0, 3.0);
     assert_eq!(v.max_dimension(), 2);
+    let v2 = Vector3d::new(1.0, 3.0, 1.0);
+    assert_eq!(v2.max_dimension(), 1);
+    let v3 = Vector3d::new(3.0, 1.0, 1.0);
+    assert_eq!(v3.max_dimension(), 0);
 }
 #[test]
 fn test_vector_3d_coordinate_system() {
@@ -547,4 +566,8 @@ fn test_vector_3d_coordinate_system() {
     assert_eq!(v2.dot(&v1), 0.0);
     assert_eq!(v.dot(&v1), 0.0);
     assert_eq!(v.dot(&v2), 0.0);
+    let v2 = Vector3d::new(0.0, 1.0, 0.0).normalized();
+    let (v1, v2) = v2.coordinate_system();
+    assert_eq!(v1, Vector3d::new(-1.0, 0.0, 0.0));
+    assert_eq!(v2, Vector3d::new(0.0, 0.0, -1.0));
 }
