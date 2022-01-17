@@ -9,7 +9,7 @@
    id="svg5"
    inkscape:version="1.1.1 (c3084ef, 2021-09-22)"
    sodipodi:docname="dot_product_zero.svg"
-   inkscape:export-filename="/Users/danlaw/Projects/pbrt-rust/src/dot_product_positive.png.png"
+   inkscape:export-filename="/Users/danlaw/Projects/pbrt-rust/src/images/dot_product_one.png"
    inkscape:export-xdpi="50.799999"
    inkscape:export-ydpi="50.799999"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -27,10 +27,10 @@
      inkscape:document-units="mm"
      showgrid="true"
      inkscape:zoom="2.2392792"
-     inkscape:cx="102.04177"
-     inkscape:cy="171.93033"
+     inkscape:cx="101.81848"
+     inkscape:cy="172.15361"
      inkscape:window-width="1792"
-     inkscape:window-height="1020"
+     inkscape:window-height="1017"
      inkscape:window-x="0"
      inkscape:window-y="25"
      inkscape:window-maximized="0"
@@ -169,53 +169,46 @@
          x="21.000284"
          y="13.258432" /></text>
     <path
-       style="fill:none;stroke:#f80000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#Arrow1Lend)"
-       d="M 21.145279,79.718002 98.36839,79.591407"
+       style="fill:none;stroke:#f80000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       d="M 18.782168,82.671891 96.005279,82.545296"
        id="path91811" />
     <path
        style="fill:none;stroke:#0000fd;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
-       d="m 21.177597,79.631835 0.05043,-62.591134"
+       d="M 18.94359,82.459995 19.268396,5.6070921"
        id="path92028"
        sodipodi:nodetypes="cc" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:0.377454px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 21.636317,67.870301 c 2.651603,1.261326 5.058649,3.034365 7.049513,5.192699 1.686855,1.828752 3.075106,3.932325 4.09326,6.202387"
-       id="path92499"
-       inkscape:path-effect="#path-effect92501"
-       inkscape:original-d="m 21.636317,67.870301 c 2.350506,1.731113 4.700342,3.462011 7.049513,5.192699 2.349166,1.730686 2.729509,4.135137 4.09326,6.202387" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:7.78503px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.194626"
-       x="27.8552"
-       y="69.85141"
-       id="text92857"
-       transform="scale(0.98310079,1.0171897)"><tspan
-         sodipodi:role="line"
-         id="tspan92855"
-         style="stroke-width:0.194626"
-         x="27.8552"
-         y="69.85141">θ</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="22.350903"
-       y="37.102879"
+       x="20.933035"
+       y="49.036594"
        id="text93281"><tspan
          sodipodi:role="line"
          id="tspan93279"
          style="stroke-width:0.264583"
-         x="22.350903"
-         y="37.102879">A</tspan></text>
+         x="20.933035"
+         y="49.036594">V</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="64.427269"
-       y="88.055214"
+       x="52.375401"
+       y="80.02063"
        id="text93281-5"><tspan
          sodipodi:role="line"
          id="tspan93279-8"
          style="stroke-width:0.264583"
-         x="64.427269"
-         y="88.055214">B</tspan></text>
+         x="52.375401"
+         y="80.02063">W</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="66.390427"
+       y="14.259804"
+       id="text13095"><tspan
+         sodipodi:role="line"
+         id="tspan13093"
+         style="stroke-width:0.264583"
+         x="66.390427"
+         y="14.259804">V⋅W=0 </tspan></text>
   </g>
 </svg>

@@ -8,7 +8,7 @@
    version="1.1"
    id="svg5"
    inkscape:version="1.1.1 (c3084ef, 2021-09-22)"
-   sodipodi:docname="dot_product_negative.svg"
+   sodipodi:docname="dot_product_one.svg"
    inkscape:export-filename="/Users/danlaw/Projects/pbrt-rust/src/images/dot_product_negative.png"
    inkscape:export-xdpi="50.799999"
    inkscape:export-ydpi="50.799999"
@@ -173,7 +173,7 @@
        d="M 19.136635,51.95144 96.359746,51.824845"
        id="path91811" />
     <path
-       style="fill:none;stroke:#0000fd;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1Lstart)"
+       style="fill:none;stroke:#0000fd;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
        d="M 19.168953,43.948849 96.020506,43.389395"
        id="path92028"
        sodipodi:nodetypes="cc" />
@@ -204,11 +204,15 @@
        style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
        x="33.661331"
        y="80.072464"
-       id="text13095"><tspan
+       id="text13095"
+       inkscape:export-filename="/Users/danlaw/Projects/pbrt-rust/src/images/dot_product_negative.png"
+       inkscape:export-xdpi="50.799999"
+       inkscape:export-ydpi="50.799999"
+       transform="translate(22.213249,-65.458191)"><tspan
          sodipodi:role="line"
          id="tspan13093"
          style="stroke-width:0.264583"
          x="33.661331"
-         y="80.072464">V⋅W = -1</tspan></text>
+         y="80.072464">V⋅W = 1</tspan></text>
   </g>
 </svg>
