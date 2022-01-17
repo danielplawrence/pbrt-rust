@@ -146,6 +146,168 @@
                     <main>
                         <h1 id="geometry-and-transformations"><a class="header" href="#geometry-and-transformations">Geometry and Transformations</a></h1>
 <h2 id="12-points"><a class="header" href="#12-points">1.2 Points</a></h2>
+<p>A point is a location in 2d or 3d space. 
+We can represent points in terms of their co-ordinates -- so \(x,y\) for 2d and \(x,y,z\) for 3d points.
+Although this is the same basic representation as vectors, the fact that they represent positions instead of directions means that they will be treated differently. The Rust structs for points look similar to vectors:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Point2D&lt;T&gt; {
+    pub x: T,
+    pub y: T,
+}
+impl&lt;T: Scalar&gt; Point2D&lt;T&gt; {
+    pub fn new(x: T, y: T) -&gt; Self {
+        Point2D{x, y}
+    }
+}
+pub struct Point3D&lt;T&gt; {
+    pub x: T,
+    pub y: T,
+    pub z: T,
+}
+impl&lt;T: Scalar&gt; Point3D&lt;T&gt; {
+    pub fn new(x: T, y: T, z: T) -&gt; Self {
+        Point3D{x, y, z}
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>The C++ pbrt implementation also includes methods for:</p>
+<ul>
+<li>Converting a 3d point to 2d by dropping the 'z' component.</li>
+<li>Converting points of one type (e.g. floats) to another (e.g. int)</li>
+<li>Converting a point of one type to a vector of another type.</li>
+</ul>
+<p>To achieve this in Rust, we can add appropriate methods to the <code>Point</code> implementations.
+To do the type conversions, we need to add additional type parameters. Taking the conversion of <code>Point3d</code> betweent types as an example:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Point3d&lt;T&gt; {
+    ...
+    pub fn from&lt;U, V: From&lt;U&gt;&gt;(p: Point3d&lt;U&gt;) -&gt; Point3d&lt;V&gt; {
+        Point3d{x: p.x.into(), y: p.y.into(), z: p.z.into()}
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>The <code>from&lt;U, V&gt;</code> statement declares two generic types, then <code>(p: Point3d&lt;U&gt;) -&gt; Point3d&lt;V&gt;</code> specifies that we will take an argument of one type and convert to the other. The trait bound on <code>V</code>, <code>V: From&lt;U&gt;</code> means that we will only support types which support this conversion. Types that satisfy this trait will have an <code>into()</code> method which will do the cast for us.</p>
+<h2 id="operations-on-vectors-and-points"><a class="header" href="#operations-on-vectors-and-points">Operations on vectors and points</a></h2>
+<p>We can add or subtract vectors and points by applying the addition/subtraction operation componentwise. Adding and subtracting vectors and points has the affect of offsetting the point along the vector. So if we think of a vector as a path, if we start at point A and add the vector, we end up at point B. Subtraction has the opposite affect -- if we start at point A and subtract the vector, we walk in the opposite direction of its trajectory.</p>
+<p align="center">
+    <img src="images/vector_point_addition.png" style="background-color: white" width="200">
+    <img src="images/vector_point_subtraction.png" style="background-color: white" width="200">
+</p>
+<p><em>Fig 1: Geometrical interpretation of vector-point addition (left) and vector-point subtraction (right).</em></p>
+<p>To implement these in Rust, we can follow the same pattern as for vectors -- importing the <code>std::ops::Add</code> and <code>std::ops::Sub</code> traits and providing implementations.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Add&lt;Vector3d&lt;T&gt;&gt; for Point3d&lt;T&gt; {
+    type Output = Self;
+    fn add(self, other: Vector3d&lt;T&gt;) -&gt; Self {
+        Point3d{x: self.x + other.x, y: self.y + other.y, z: self.z + other.z}
+    }
+}
+impl&lt;T: Scalar&gt; Sub&lt;Vector3d&lt;T&gt;&gt; for Point3d&lt;T&gt; {
+    type Output = Self;
+    fn sub(self, other: Vector3d&lt;T&gt;) -&gt; Self {
+        Point3d{x: self.x - other.x, y: self.y - other.y, z: self.z - other.z}
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Subtracting two points gives us the vector between them, as shown below:</p>
+<p align="center">
+    <img src="images/point_point_subtraction.png" style="background-color: white" width="200">
+</p>
+<p>This means that we can easily find the distance between two points by subtracting them and taking the length of the resulting vector. We can implement this by using the <code>length()</code> method added to the <code>Vector</code> structs in the previous chapter. First we implement <code>Sub</code> for points, which returns a vector:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Sub&lt;Point3d&lt;T&gt;&gt; for Point3d&lt;T&gt; {
+    type Output = Vector3d&lt;T&gt;;
+    fn sub(self, other: Self) -&gt; Self::Output {
+        Vector3d{x: self.x - other.x, y: self.y - other.y, z: self.z - other.z}
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Then we add the <code>distance</code> method to the <code>impl</code> block for the <code>Point</code> structs. I've also added <code>distance_squared</code> following the c++ pbrt implementation:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Point3d&lt;T&gt; {
+    ...
+    pub fn distance(self, other: Self) -&gt; T {
+        return (self - other).length();
+    }
+    pub fn distance_squared(self, other: Self) -&gt; T {
+        return (self - other).squared_length();
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Following the pbrt book, we also include methods for adding points and scalar multiplication with a point, which are similar to the implementation for <code>Vector</code>.</p>
+<h2 id="linear-interpolation"><a class="header" href="#linear-interpolation">Linear interpolation</a></h2>
+<p>It's often necessary to interpolate between two points. For example, given the two points \((x_0, y_0)\) and \((x_1, y_1)\) in the image below, we may want to find some intermediate point \((x, y)\).</p>
+<p align="center">
+    <img src="images/linear_interpolation.png" style="background-color: white" width="200">
+</p>
+<p><em>Fig 2: Linear interpolation</em></p>
+<p>The goal of interpolation is to be able to return arbitrary points which lie between two values. So we are aiming for a method with the following signature:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Point2d&lt;T&gt; {
+    ...
+    pub fn lerp(&amp;self, t: T, p0: Point2d&lt;T&gt;, p1: Point2d&lt;T&gt;) -&gt; Point2d&lt;T&gt;;
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>We want this method to return a point at p0 when the <em>t</em> argument is 0, and a point at p1 when the value of t is 1.
+We can interpolate between two points by imagining a straight line between them, as in the above diagram, then picking points along it. We can get a line like this by finding the vector between the two points (using subtraction, as implemented earlier), then multiplying the resulting vector by some amount. For example, if we scale it by 0.5, we get a vector pointing in the same direction, but with half the length. We then just need to add the starting point (if we just took the x and y values of the vector, our line would start from the origin).</p>
+<p align="center">
+    <img src="images/lerp_1.png" style="background-color: white" width="150">
+        <img src="images/lerp_2.png" style="background-color: white" width="150">
+            <img src="images/lerp_3.png" style="background-color: white" width="150">
+                <img src="images/lerp_4.png" style="background-color: white" width="150">
+</p>
+<p><em>Fig 3: Linear interpolation by finding the vector between two points then scaling it.</em></p>
+<p>The above process can be translated into code as follows:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Point2d&lt;T&gt; {
+    ...
+        pub fn lerp(self, other: Self, t: T) -&gt; Self {
+        return self + (other - self) * t;
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="miscellaneous-point-operations"><a class="header" href="#miscellaneous-point-operations">Miscellaneous point operations</a></h2>
+<p>The c++ implementation of pbrt includes:</p>
+<ul>
+<li>operations for returning component-wise min and max</li>
+<li>operations for applying floor(), ceil(), and abs() to each component and returning a new point</li>
+<li>a permute operation which returns a new point with components permuted based on some indices</li>
+</ul>
+<p>These are mostly straightfoward, although it should be noted that floor() and ceil() are only defined for floating-point types, so we need to define these in a separate <code>impl</code> block which specifies the <code>Float</code> trait bound:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar + Float&gt; Point3d&lt;T&gt; {
+    pub fn floor(self) -&gt; Self {
+        Point3d::new(self.x.floor(), self.y.floor(), self.z.floor())
+    }
+    pub fn ceil(self) -&gt; Self {
+        Point3d::new(self.x.ceil(), self.y.ceil(), self.z.ceil())
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
 
                     </main>
 

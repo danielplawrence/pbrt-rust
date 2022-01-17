@@ -162,11 +162,12 @@
 </p>
 <p><em>Fig 1: A visual representation of a three-dimensional vector.</em></p>
 <p>Vectors will give our renderer the mathematical foundation for modeling rays of light. Our renderer will represent vectors in terms of their co-ordinates from the origin. For example, the two-dimensional vector \(V=(1,1)\)
-can be visualized as a line starting at the origin (0,0) and extending to the point (4,2)</p>
+can be visualized as a line starting at the origin (0,0) and extending to the point (4,2).</p>
 <p align="center">
     <img src="images/2d_vector.png" style="background-color: white" width="200">
 </p>
-<p>To represent vectors in our rust renderer, we will use two structs: <code>Vector2d</code> for the two-dimensional case, and <code>Vector3d</code> for the three-dimensional case. Because we may want to create vectors of both floating-point and integer types in our rendering application, it's useful to implement these as generic types, as follows:</p>
+<p><em>Fig 2: A visual representation of the vector (4,2).</em></p>
+<p>To represent vectors in our Rust renderer, we will use two structs: <code>Vector2d</code> for the two-dimensional case, and <code>Vector3d</code> for the three-dimensional case. Because we may want to create vectors of both floating-point and integer types in our rendering application, it's useful to implement these as generic types, as follows:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -186,7 +187,7 @@ pub struct Vector3d&lt;T&gt; {
    pub z: T
 }
 impl&lt;T&gt; Vector3d&lt;T&gt; {
-    fn new(x: T, y: T, z: T) -&gt; Self {
+    pub fn new(x: T, y: T, z: T) -&gt; Self {
         Vector3d { x, y, z }
     }
 }
@@ -225,7 +226,7 @@ V+W=(Vx+Wx,Vy+Wy,Vz+Wz) \\
 <p align="center">
     <img src="images/vector_addition.png" style="background-color: white" width="200">
 </p>
-<p><em>Fig 2: Geometric interpretation of vector addition.</em></p>
+<p><em>Fig 3: Geometric interpretation of vector addition.</em></p>
 <p>As one might expect, subtraction is also applied elementwise:</p>
 <p>\[
 V=(1,3,5) \\
@@ -239,36 +240,49 @@ and \(W=(3,5)\). Subtracting V from W gives us \(W−V=(−2,3)\).</p>
 <p align="center">
     <img src="images/vector_subtraction.png" style="background-color: white" width="200">
 </p>
-<p><em>Fig 3: Geometric interpretation of vector subtraction.</em></p>
-<p>To implement these operations in Rust, we import the <code>std::ops::Add</code> and <code>std::ops::Sub</code> traits and provide implementations with <code>impl</code> statements. Things get a little tricky here, because the implementations will need to use the + and - operator on the vector components; however, because we are using generics, we are unable to guarantee that the components (which could be of any type) actually support these operators. To get around this, we can use the <code>num::Num</code> trait as a trait bound on our implementations, meaning that the <code>Vector</code> structs can only be created with numeric types:</p>
+<p><em>Fig 4: Geometric interpretation of vector subtraction.</em></p>
+<p>To implement these operations in Rust, we import the <code>std::ops::Add</code> and <code>std::ops::Sub</code> traits and provide implementations with <code>impl</code> statements. Things get a little tricky here, because the implementations will need to use the + and - operator on the vector components; however, because we are using generics, we are unable to guarantee that the components (which could be of any type) actually support these operators. To get around this, we can use the <code>num::Real</code> trait as a trait bound on our implementations, meaning that the <code>Vector</code> structs can only be created with numeric types which represent real numbers.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>use num::Num;
+</span>use num::Real;
 
-impl&lt;T:Num&gt; Vector3d&lt;T&gt; {
+impl&lt;T:Real&gt; Vector3d&lt;T&gt; {
     fn new(x: T, y: T, z: T) -&gt; Self {
         Vector3d { x, y, z }
     }
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>The <code>impl&lt;T:Num&gt;</code> statement means that we are implementing the new constructor only for types which support numeric operations. With this in place, we can import the <code>Add</code> and <code>Sub</code> traits from the <code>std::ops</code> crate, and define our addition and subtraction operations:</p>
+<p>The <code>impl&lt;T:Real</code> statement means that we are implementing the new constructor only for types which represent real numbers. With this in place, we can import the <code>Add</code> and <code>Sub</code> traits from the <code>std::ops</code> crate, and define our addition and subtraction operations:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use std::ops::{Index, Add, Sub};
 
-impl &lt;T:Num&gt; Add for Vector3d&lt;T&gt; {
+impl &lt;T:Real&gt; Add for Vector3d&lt;T&gt; {
     type Output = Vector3d&lt;T&gt;;
     fn add(self, other: Self) -&gt; Self::Output {
         Vector3d::new(self.x + other.x, self.y + other.y, self.z + other.z)
     }
 }
-impl &lt;T:Num&gt; Sub for Vector3d&lt;T&gt; {
+impl &lt;T:Real&gt; Sub for Vector3d&lt;T&gt; {
     type Output = Vector3d&lt;T&gt;;
     fn sub(self, other: Self) -&gt; Self::Output {
         Vector3d::new(self.x - other.x, self.y - other.y, self.z - other.z)
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h3 id="vector-negation"><a class="header" href="#vector-negation">Vector negation</a></h3>
+<p>Negating a vector can be achieved by negating each component. It results in a vector of the same magnitude pointing in the opposite direction. We can implement this in a similar manner to the other operations -- importing the <code>Neg</code> trait from <code>std::ops</code> and providing an implementation.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl &lt;T:Real&gt; Neg for Vector3d&lt;T&gt; {
+    type Output = Vector3d&lt;T&gt;;
+    fn neg(self) -&gt; Self::Output {
+        Vector3d::new(-self.x, -self.y, -self.z)
     }
 }
 <span class="boring">}
@@ -296,20 +310,20 @@ Vn=(V_xn,V_yn,V_zn) \\
 <p align="center">
     <img src="images/vector_scalar_mul.png" style="background-color: white" width="200">
 </p>
-<p><em>Fig 4: Geometric interpretation of multiplying a vector by a scalar.</em></p>
+<p><em>Fig 5: Geometric interpretation of multiplying a vector by a scalar.</em></p>
 <p>In Rust code, this is pretty much the same as what we did for the <code>Add</code> and <code>Sub</code> operations -- we again import the relevant traits from the <code>std::ops</code> library, and provide implementations.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use std::ops::{Index, Add, Sub, Mul, Div};
 
-impl &lt;T:Num&gt; Mul for Vector3d&lt;T&gt; {
+impl &lt;T:Real&gt; Mul for Vector3d&lt;T&gt; {
     type Output = Vector3d&lt;T&gt;;
     fn mul(self, other: Self) -&gt; Self::Output {
         Vector3d::new(self.x * other.x, self.y * other.y, self.z * other.z)
     }
 }
-impl &lt;T:Num&gt; Div for Vector3d&lt;T&gt; {
+impl &lt;T:Real&gt; Div for Vector3d&lt;T&gt; {
     type Output = Vector3d&lt;T&gt;;
     fn div(self, other: Self) -&gt; Self::Output {
         Vector3d::new(self.x / other.x, self.y / other.y, self.z / other.z)
@@ -317,20 +331,356 @@ impl &lt;T:Num&gt; Div for Vector3d&lt;T&gt; {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>One difference with this case is that we need to add an additional trait bound, the <code>Copy</code> trait -- this is because the multiplication and division operators move the value we are multiplying/dividing by. This means that when we do <code>x * y</code>, the arguments are pushed on to the stack, and can no-longer be used in the current scope. Adding the <code>Copy</code> trait ensures that these values can be copied.</p>
+<h2 id="the-dot-product-of-two-vectors"><a class="header" href="#the-dot-product-of-two-vectors">The dot product of two vectors</a></h2>
+<p>The dot product gives us a measure of the similarity between two vectors. This will be useful for doing things like calculating the angle at which light strikes a surface. To take the dot product of two vectors, we multiply their components element-wise, and sum the result:</p>
+<p>\[
+V \cdot W = \sum_{i=1}^n V_iW_i\\
+\]</p>
+<p>For example, the dot product of \(V = (2, 3, 4\) and \(W = (4, 3, 2)\) is:</p>
+<p>\[
+(V_xW_x, V_yW_y, V_zW_z)\\
+= (2 x 4, 3 x 3, 4 x 2)\\
+= (8, 9, 8)
+\]</p>
+<p>The dot product is useful because of its relationship to the angle between the two vectors -- it is equal to the product of the lengths of the vectors times the cosine of the angle between them:</p>
+<p>\[
+V \cdot W = |V| |W| cos \theta
+\]</p>
+<p>A consequence of this is that if both vectors are normalized to have a length of one (see: 'Vector Normalization' below), the magnitudes can be disregarded by removing the first term from the above equation, so we have:</p>
+<p>\[
+\hat{V} \cdot \hat{W} = cos \theta
+\]</p>
+<p>So the dot product allows us to directly calculate the cosine of the angle between two vectors. When the dot product is 0, this means that the two vectors are exactly perpendicular; when it is 1, it means that the two vectors are parallel, and when it is -1, the vectors point in the opposite directions.</p>
+<p align="center">
+    <img src="images/dot_product_zero.png" style="background-color: white" width="200">
+    <img src="images/dot_product_one.png" style="background-color: white" width="200">
+    <img src="images/dot_product_negative.png" style="background-color: white" width="200">
+</p>
+<p><em>Fig 6: Geometric interpretation of the dot product for unit vectors.</em></p>
+<p>To implement the dot product in our Rust renderer, we add a <code>dot()</code> method to the <code>impl</code> block for our <code>Vector</code> structs:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>// x and y are pushed on to the stack as part of the multiplication operation.
-// If they don't implement Copy, they cannot be re-used in this scope.
-let a = x * y;
-// If x and y implement Copy, Rust will copy them here. 
-// Otherwise, the code will fail to compile.
-let b = x * z;
+</span>impl&lt;T:Real Vector3d&lt;T&gt; {
+    pub fn new(x: T, y: T, z: T) -&gt; Self {
+        Vector3d { x, y, z }
+    }
+    pub fn dot(&amp;self, other: &amp;Self) -&gt; T {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="the-cross-product-of-two-vectors"><a class="header" href="#the-cross-product-of-two-vectors">The cross product of two vectors</a></h2>
+<p>The cross product of two three-dimensional vectors allows us to find a vector which is orthogonal to both of them. It can be calculated as follows:</p>
+<p>\[
+(V \times W)_x = V_yW_z - V_zW_y\\
+(V \times W)_y = V_zW_x - V_xW_z\\
+(V \times W)_z = V_xW_y - V_yW_x\\
+\]</p>
+<p>One way to remember this pattern is to observe that for each component of the output vector (x, y, z), the calculation uses the next two components in the sequence. So for \((V \times W)_x\), we use the y and z components of the two input vectors; \((V \times W)_y\) uses z and x, and \((V \times W)_z\) uses x and y. The calculation then proceeds as follows. For each output component:</p>
+<ul>
+<li>Identify the two target components for this output component. So for \((V \times W)_x\), we are dealing with y and z.</li>
+<li>Take the first component (from the target components) on the first input vector, and multiply it with the second component on the second input vector. Our target components are y and z, and our input vectors are \(V\) and \(W\) -- so we multiply \(V_y\) and \(W_z\)</li>
+<li>Take the second component (from the target components) on the first input vector, and multiply it with the first component on the second input vector. Our target components are y and z, and our input vectors are \(V\) and \(W\) -- so we multiply \(V_z\) and \(W_y\)</li>
+<li>Subtract the second multiplication result from the first.</li>
+</ul>
+<p>The geometric interpretation of the cross product is that, given two input vectors, it returns a third vector which is orthogonal to the two input vectors. In the image below, vectors \(A\) and \(B\) form a plane in the X-Z dimension, so their cross-product is a vector which points straight up along the Y axis. The angle between this vector and each of the others is 90 degrees.</p>
+<p align="center">
+    <img src="images/cross_product.png" style="background-color: white" width="200">
+</p>
+<p>*Fig 7: Geometric interpretation of the cross product.</p>
+<p>To implement the cross product for our <code>Vector3d</code> struct, we add it to the relevant <code>impl</code> block. Note that we don't need to do this for <code>Vector2d</code>, as the cross-product is not well-defined for 2d vectors.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T:Real&gt; Vector3d&lt;T&gt; {
+    pub fn new(x: T, y: T, z: T) -&gt; Self {
+        Vector3d { x, y, z }
+    }
+    pub fn dot(&amp;self, other: &amp;Self) -&gt; T {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+    pub fn cross(&amp;self, other: &amp;Self) -&gt; Self {
+        Vector3d::new(self.y * other.z - self.z * other.y,
+                      self.z * other.x - self.x * other.z,
+                      self.x * other.y - self.y * other.x)
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>To test this method, we can consider the case of our typical representation of a 3D space with axes, where each axis is a unit vector extending in one dimension only. So we have an X axis \((1, 0, 0)\), Y axis \((0, 1, 0)\), and Z axis \((0, 0, 1)\). We can retrieve the third axis given two others using the cross product:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[test]
+fn test_vector_3d_cross() {
+    let v1 = Vector3d::new(1.0, 0.0, 0.0);
+    let v2 = Vector3d::new(0.0, 1.0, 0.0);
+    let v3 = Vector3d::new(0.0, 0.0, 1.0);
+    assert_eq!(v1.cross(&amp;v2), v3);
+    assert_eq!(v3.cross(&amp;v1), v2);
+    assert_eq!(v2.cross(&amp;v3), v1);
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>However, it should be noted that order matters when calculating the cross product. This because there are always two orthogonal vectors given two inputs -- one in each direction. So if we take the cross products in the above test and reverse the operands, we get the inverse result:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[test]
+fn test_vector_3d_cross_negative() {
+    let v1 = Vector3d::new(1.0, 0.0, 0.0);
+    let v2 = Vector3d::new(0.0, 1.0, 0.0);
+    let v3 = Vector3d::new(0.0, 0.0, 1.0);
+    assert_eq!(v2.cross(&amp;v1), -v3);
+    assert_eq!(v1.cross(&amp;v3), -v2);
+    assert_eq!(v3.cross(&amp;v2), -v1);
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="normalization"><a class="header" href="#normalization">Normalization</a></h2>
+<p>To normalize a vector we compute a new vector with the same direction but with length one. To achieve this, we first need a way to compute the length of a vector. This can be achieved by taking the square-root of the sum of squared components. So if \(V\) is a vector with \(n\) components, and lower-case \(v_n\) represents each component, the length is calculated as:</p>
+<p>\[
+|V| = \sqrt{v_1^2 + v_2^2 ... v_n^2 }\\
+\]</p>
+<p>To get the normalized vector, we divide it by the length, which is achieved by applying the division to each component:</p>
+<p>\[
+\hat{V} = \frac{V}{|V|}\\
+= (\frac{V_x}{|V|}, \frac{V_y}{|V|}, \frac{V_z}{|V|})\\
+\]</p>
+<p>In our Rust code, we can achieve this with a few additional methods for our <code>Vector</code> implementations -- <code>squared_length()</code>, <code>length()</code> and <code>normalized()</code>:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T:Real&gt; Vector3d&lt;T&gt; {
+    ...
+    pub fn squared_length(&amp;self) -&gt; T {
+        self.x * self.x + self.y * self.y + self.z * self.z
+    }
+    pub fn length(&amp;self) -&gt; T {
+        self.squared_length().sqrt()
+    }
+    pub fn normalized(&amp;self) -&gt; Self {
+        Vector3d {
+            x: self.x / self.length(),
+            y: self.y / self.length(),
+            z: self.z / self.length()
+        }
+    }
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="miscellaneous-operations"><a class="header" href="#miscellaneous-operations">Miscellaneous Operations</a></h2>
+<p>There are several other methods included for Vectors in the C++ pbrt implementation. These include;</p>
+<ul>
+<li>Methods for retrieving the max and min component of a vector (<code>min_component()</code> and <code>max_component()</code>)</li>
+<li>A method for retrieving the index of the component with the largest value (<code>max_dimension()</code>)</li>
+<li>Component-wise minimum and maximum operations (<code>min()</code> and <code>max()</code>)</li>
+<li>A method for permuting a vector based on input indices (<code>permute()</code>)</li>
+</ul>
+<h2 id="generating-a-coordinate-system-from-an-input-vector"><a class="header" href="#generating-a-coordinate-system-from-an-input-vector">Generating a coordinate system from an input vector</a></h2>
+<p>We will frequently want to construct a local coordinate system given only a single 3D vector. 
+Because the cross product of two vectors is orthogonal to both, we can apply the cross product two times to get a set of three orthogonal vectors for the coordinate system. The corresponding method on our Rust implemention of <code>Vector3d</code> looks like this:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T:Real&gt; Vector3d&lt;T&gt; {
+    ...
+    pub fn coordinate_system(&amp;self) -&gt; (Self, Self) {
+        let y = if self.x.abs() &gt; self.y.abs() {
+            Vector3d::new(-self.z, zero(), self.x) / 
+            (self.x * self.x + self.z * self.z).sqrt()
+        } else {
+            Vector3d::new(zero(), self.z, -self.y) / 
+            (self.y * self.y + self.z * self.z).sqrt()
+        };
+        (self.cross(&amp;y), y)
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>One thing of note here is the <code>zero()</code> function imported from <code>num</code> -- this allows us to provide a 0 value as default without specifying a type. If we used <code>0.0</code> here, the Rust compiler would complain, as this would commit us to a vector of floats, but we have defined <code>Vector</code> as a generic type.</p>
+<p>In a similar manner to the tests for the cross product, we can test this method by passing it a unit vector in X (\(1, 0, 0)\) -- we expect it to return corresponding orthogonal vectors in Y and Z. We can further convince ourselves that these are orthogonal using the dot product, as we expect a value of zero for the dot product of two orthogonal vectors.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[test]
+fn test_vector_3d_coordinate_system() {
+    let v = Vector3d::new(1.0, 0.0, 0.0).normalized();
+    let (v1, v2) = v.coordinate_system();
+    assert_eq!(v1, Vector3d::new(0.0, -1.0, 0.0));
+    assert_eq!(v2, Vector3d::new(0.0, 0.0, 1.0));
+    assert_eq!(v1.dot(&amp;v2), 0.0);
+    assert_eq!(v2.dot(&amp;v1), 0.0);
+    assert_eq!(v.dot(&amp;v1), 0.0);
+    assert_eq!(v.dot(&amp;v2), 0.0);
+}
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="geometry-and-transformations-1"><a class="header" href="#geometry-and-transformations-1">Geometry and Transformations</a></h1>
 <h2 id="12-points"><a class="header" href="#12-points">1.2 Points</a></h2>
+<p>A point is a location in 2d or 3d space. 
+We can represent points in terms of their co-ordinates -- so \(x,y\) for 2d and \(x,y,z\) for 3d points.
+Although this is the same basic representation as vectors, the fact that they represent positions instead of directions means that they will be treated differently. The Rust structs for points look similar to vectors:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Point2D&lt;T&gt; {
+    pub x: T,
+    pub y: T,
+}
+impl&lt;T: Scalar&gt; Point2D&lt;T&gt; {
+    pub fn new(x: T, y: T) -&gt; Self {
+        Point2D{x, y}
+    }
+}
+pub struct Point3D&lt;T&gt; {
+    pub x: T,
+    pub y: T,
+    pub z: T,
+}
+impl&lt;T: Scalar&gt; Point3D&lt;T&gt; {
+    pub fn new(x: T, y: T, z: T) -&gt; Self {
+        Point3D{x, y, z}
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>The C++ pbrt implementation also includes methods for:</p>
+<ul>
+<li>Converting a 3d point to 2d by dropping the 'z' component.</li>
+<li>Converting points of one type (e.g. floats) to another (e.g. int)</li>
+<li>Converting a point of one type to a vector of another type.</li>
+</ul>
+<p>To achieve this in Rust, we can add appropriate methods to the <code>Point</code> implementations.
+To do the type conversions, we need to add additional type parameters. Taking the conversion of <code>Point3d</code> betweent types as an example:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Point3d&lt;T&gt; {
+    ...
+    pub fn from&lt;U, V: From&lt;U&gt;&gt;(p: Point3d&lt;U&gt;) -&gt; Point3d&lt;V&gt; {
+        Point3d{x: p.x.into(), y: p.y.into(), z: p.z.into()}
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>The <code>from&lt;U, V&gt;</code> statement declares two generic types, then <code>(p: Point3d&lt;U&gt;) -&gt; Point3d&lt;V&gt;</code> specifies that we will take an argument of one type and convert to the other. The trait bound on <code>V</code>, <code>V: From&lt;U&gt;</code> means that we will only support types which support this conversion. Types that satisfy this trait will have an <code>into()</code> method which will do the cast for us.</p>
+<h2 id="operations-on-vectors-and-points"><a class="header" href="#operations-on-vectors-and-points">Operations on vectors and points</a></h2>
+<p>We can add or subtract vectors and points by applying the addition/subtraction operation componentwise. Adding and subtracting vectors and points has the affect of offsetting the point along the vector. So if we think of a vector as a path, if we start at point A and add the vector, we end up at point B. Subtraction has the opposite affect -- if we start at point A and subtract the vector, we walk in the opposite direction of its trajectory.</p>
+<p align="center">
+    <img src="images/vector_point_addition.png" style="background-color: white" width="200">
+    <img src="images/vector_point_subtraction.png" style="background-color: white" width="200">
+</p>
+<p><em>Fig 1: Geometrical interpretation of vector-point addition (left) and vector-point subtraction (right).</em></p>
+<p>To implement these in Rust, we can follow the same pattern as for vectors -- importing the <code>std::ops::Add</code> and <code>std::ops::Sub</code> traits and providing implementations.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Add&lt;Vector3d&lt;T&gt;&gt; for Point3d&lt;T&gt; {
+    type Output = Self;
+    fn add(self, other: Vector3d&lt;T&gt;) -&gt; Self {
+        Point3d{x: self.x + other.x, y: self.y + other.y, z: self.z + other.z}
+    }
+}
+impl&lt;T: Scalar&gt; Sub&lt;Vector3d&lt;T&gt;&gt; for Point3d&lt;T&gt; {
+    type Output = Self;
+    fn sub(self, other: Vector3d&lt;T&gt;) -&gt; Self {
+        Point3d{x: self.x - other.x, y: self.y - other.y, z: self.z - other.z}
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Subtracting two points gives us the vector between them, as shown below:</p>
+<p align="center">
+    <img src="images/point_point_subtraction.png" style="background-color: white" width="200">
+</p>
+<p>This means that we can easily find the distance between two points by subtracting them and taking the length of the resulting vector. We can implement this by using the <code>length()</code> method added to the <code>Vector</code> structs in the previous chapter. First we implement <code>Sub</code> for points, which returns a vector:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Sub&lt;Point3d&lt;T&gt;&gt; for Point3d&lt;T&gt; {
+    type Output = Vector3d&lt;T&gt;;
+    fn sub(self, other: Self) -&gt; Self::Output {
+        Vector3d{x: self.x - other.x, y: self.y - other.y, z: self.z - other.z}
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Then we add the <code>distance</code> method to the <code>impl</code> block for the <code>Point</code> structs. I've also added <code>distance_squared</code> following the c++ pbrt implementation:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Point3d&lt;T&gt; {
+    ...
+    pub fn distance(self, other: Self) -&gt; T {
+        return (self - other).length();
+    }
+    pub fn distance_squared(self, other: Self) -&gt; T {
+        return (self - other).squared_length();
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Following the pbrt book, we also include methods for adding points and scalar multiplication with a point, which are similar to the implementation for <code>Vector</code>.</p>
+<h2 id="linear-interpolation"><a class="header" href="#linear-interpolation">Linear interpolation</a></h2>
+<p>It's often necessary to interpolate between two points. For example, given the two points \((x_0, y_0)\) and \((x_1, y_1)\) in the image below, we may want to find some intermediate point \((x, y)\).</p>
+<p align="center">
+    <img src="images/linear_interpolation.png" style="background-color: white" width="200">
+</p>
+<p><em>Fig 2: Linear interpolation</em></p>
+<p>The goal of interpolation is to be able to return arbitrary points which lie between two values. So we are aiming for a method with the following signature:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Point2d&lt;T&gt; {
+    ...
+    pub fn lerp(&amp;self, t: T, p0: Point2d&lt;T&gt;, p1: Point2d&lt;T&gt;) -&gt; Point2d&lt;T&gt;;
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>We want this method to return a point at p0 when the <em>t</em> argument is 0, and a point at p1 when the value of t is 1.
+We can interpolate between two points by imagining a straight line between them, as in the above diagram, then picking points along it. We can get a line like this by finding the vector between the two points (using subtraction, as implemented earlier), then multiplying the resulting vector by some amount. For example, if we scale it by 0.5, we get a vector pointing in the same direction, but with half the length. We then just need to add the starting point (if we just took the x and y values of the vector, our line would start from the origin).</p>
+<p align="center">
+    <img src="images/lerp_1.png" style="background-color: white" width="150">
+        <img src="images/lerp_2.png" style="background-color: white" width="150">
+            <img src="images/lerp_3.png" style="background-color: white" width="150">
+                <img src="images/lerp_4.png" style="background-color: white" width="150">
+</p>
+<p><em>Fig 3: Linear interpolation by finding the vector between two points then scaling it.</em></p>
+<p>The above process can be translated into code as follows:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Point2d&lt;T&gt; {
+    ...
+        pub fn lerp(self, other: Self, t: T) -&gt; Self {
+        return self + (other - self) * t;
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="miscellaneous-point-operations"><a class="header" href="#miscellaneous-point-operations">Miscellaneous point operations</a></h2>
+<p>The c++ implementation of pbrt includes:</p>
+<ul>
+<li>operations for returning component-wise min and max</li>
+<li>operations for applying floor(), ceil(), and abs() to each component and returning a new point</li>
+<li>a permute operation which returns a new point with components permuted based on some indices</li>
+</ul>
+<p>These are mostly straightfoward, although it should be noted that floor() and ceil() are only defined for floating-point types, so we need to define these in a separate <code>impl</code> block which specifies the <code>Float</code> trait bound:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar + Float&gt; Point3d&lt;T&gt; {
+    pub fn floor(self) -&gt; Self {
+        Point3d::new(self.x.floor(), self.y.floor(), self.z.floor())
+    }
+    pub fn ceil(self) -&gt; Self {
+        Point3d::new(self.x.ceil(), self.y.ceil(), self.z.ceil())
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
 
                     </main>
 
