@@ -164,4 +164,3 @@ impl<T: Scalar + Float> Point3d<T> {
     }
 }
 ```
-

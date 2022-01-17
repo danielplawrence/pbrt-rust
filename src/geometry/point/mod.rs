@@ -22,7 +22,6 @@ impl<T: Scalar> Point2d<T> {
         Vector2d::new(self.x.into(), self.y.into())
     }
     pub fn distance(self, other: Self) -> T {
-        println!("{:?}", self - other);
         return (self - other).length();
     }
     pub fn distance_squared(self, other: Self) -> T {
