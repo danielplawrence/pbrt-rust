@@ -41,3 +41,19 @@ impl Scalar for i32{
         ((self as f64).sqrt() as i64).try_into().unwrap()
     }
 }
+#[test]
+fn test_f64_sqrt(){
+    assert_eq!(f64::sqrt(4.0), 2.0);
+}
+#[test]
+fn test_i64_sqrt(){
+    assert_eq!(i64::sqrt(4), 2);
+}
+#[test]
+fn test_f32_sqrt(){
+    assert_eq!(f32::sqrt(4.0), 2.0);
+}
+#[test]
+fn test_i32_sqrt(){
+    assert_eq!(i32::sqrt(4), 2);
+}
