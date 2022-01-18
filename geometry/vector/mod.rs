@@ -97,7 +97,8 @@ impl<T: Scalar> Mul<T> for Vector2d<T> {
 impl<T: Scalar> Div<T> for Vector2d<T> {
     type Output = Vector2d<T>;
     fn div(self, other: T) -> Self::Output {
-        Vector2d::new(self.x / other, self.y / other)
+        let recip = T::one() / other;
+        Vector2d::new(self.x / recip, self.y / recip)
     }
 }
 impl<T: Scalar> Neg for Vector2d<T> {
@@ -242,7 +243,8 @@ impl <T: Scalar> Mul<T> for Vector3d<T> {
 impl <T: Scalar> Div<T> for Vector3d<T> {
     type Output = Vector3d<T>;
     fn div(self, other: T) -> Self::Output {
-        Vector3d::new(self.x / other, self.y / other, self.z / other)
+        let recip = T::one() / other;
+        Vector3d::new(self.x / recip, self.y / recip, self.z / recip)
     }
 }
 impl <T: Scalar> Neg for Vector3d<T> {
@@ -330,7 +332,8 @@ impl <T: Scalar> Mul<T> for Normal3d<T> {
 impl <T: Scalar> Div<T> for Normal3d<T> {
     type Output = Normal3d<T>;
     fn div(self, other: T) -> Self::Output {
-        Normal3d::new(self.x / other, self.y / other, self.z / other)
+        let recip = T::one() / other;
+        Normal3d::new(self.x / recip, self.y / recip, self.z / recip)
     }
 }
 impl <T: Scalar> Neg for Normal3d<T> {
