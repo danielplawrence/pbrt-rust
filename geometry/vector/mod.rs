@@ -4,6 +4,13 @@ use num::zero;
 
 use super::Scalar;
 
+pub trait Dot<T, U: Scalar> {
+    fn dot(&self, other: &T) -> U;
+    fn abs_dot(&self, other: &T) -> U {
+        self.dot(other).abs()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Vector2d<T> {
     pub x: T,
@@ -12,9 +19,6 @@ pub struct Vector2d<T> {
 impl<T: Scalar> Vector2d<T> {
     pub fn new(x: T, y: T) -> Self {
         Vector2d { x, y }
-    }
-    pub fn dot(&self, other: &Self) -> T {
-        self.x * other.x + self.y * other.y
     }
     pub fn squared_length(&self) -> T {
         self.x * self.x + self.y * self.y
@@ -98,13 +102,18 @@ impl<T: Scalar> Div<T> for Vector2d<T> {
     type Output = Vector2d<T>;
     fn div(self, other: T) -> Self::Output {
         let recip = T::one() / other;
-        Vector2d::new(self.x / recip, self.y / recip)
+        Vector2d::new(self.x * recip, self.y * recip)
     }
 }
 impl<T: Scalar> Neg for Vector2d<T> {
     type Output = Vector2d<T>;
     fn neg(self) -> Self::Output {
         Vector2d::new(-self.x, -self.y)
+    }
+}
+impl<U: Scalar> Dot<Vector2d<U>, U> for Vector2d<U> {
+    fn dot(&self, other: &Vector2d<U>) -> U {
+        self.x * other.x + self.y * other.y
     }
 }
 
@@ -244,13 +253,23 @@ impl <T: Scalar> Div<T> for Vector3d<T> {
     type Output = Vector3d<T>;
     fn div(self, other: T) -> Self::Output {
         let recip = T::one() / other;
-        Vector3d::new(self.x / recip, self.y / recip, self.z / recip)
+        Vector3d::new(self.x * recip, self.y * recip, self.z * recip)
     }
 }
 impl <T: Scalar> Neg for Vector3d<T> {
     type Output = Vector3d<T>;
     fn neg(self) -> Self::Output {
         Vector3d::new(-self.x, -self.y, -self.z)
+    }
+}
+impl<U: Scalar> Dot<Vector3d<U>, U> for Vector3d<U> {
+    fn dot(&self, other: &Vector3d<U>) -> U {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+}
+impl<U: Scalar> Dot<Normal3d<U>, U> for Vector3d<U> {
+    fn dot(&self, other: &Normal3d<U>) -> U {
+        self.x * other.x + self.y * other.y + self.z * other.z
     }
 }
 
@@ -275,29 +294,6 @@ impl<T: Scalar> Normal3d<T>{
             y: (self.y / self.length()),
             z: (self.z / self.length())
         }
-    }
-}
-pub trait Dot<T, U> {
-    fn dot(&self, other: &T) -> U;
-}
-impl<U: Scalar> Dot<Vector3d<U>, U> for Vector3d<U> {
-    fn dot(&self, other: &Vector3d<U>) -> U {
-        self.x * other.x + self.y * other.y + self.z * other.z
-    }
-}
-impl<U: Scalar> Dot<Normal3d<U>, U> for Vector3d<U> {
-    fn dot(&self, other: &Normal3d<U>) -> U {
-        self.x * other.x + self.y * other.y + self.z * other.z
-    }
-}
-impl<U: Scalar> Dot<Vector3d<U>, U> for Normal3d<U> {
-    fn dot(&self, other: &Vector3d<U>) -> U {
-        self.x * other.x + self.y * other.y + self.z * other.z
-    }
-}
-impl<U: Scalar> Dot<Normal3d<U>, U> for Normal3d<U> {
-    fn dot(&self, other: &Normal3d<U>) -> U {
-        self.x * other.x + self.y * other.y + self.z * other.z
     }
 }
 impl<T: Scalar> Index<usize> for Normal3d<T> {
@@ -333,7 +329,7 @@ impl <T: Scalar> Div<T> for Normal3d<T> {
     type Output = Normal3d<T>;
     fn div(self, other: T) -> Self::Output {
         let recip = T::one() / other;
-        Normal3d::new(self.x / recip, self.y / recip, self.z / recip)
+        Normal3d::new(self.x * recip, self.y * recip, self.z * recip)
     }
 }
 impl <T: Scalar> Neg for Normal3d<T> {
@@ -345,6 +341,16 @@ impl <T: Scalar> Neg for Normal3d<T> {
 impl <T: Scalar> From<Vector3d<T>> for Normal3d<T> {
     fn from(v: Vector3d<T>) -> Self {
         Normal3d::new(v.x, v.y, v.z)
+    }
+}
+impl<U: Scalar> Dot<Vector3d<U>, U> for Normal3d<U> {
+    fn dot(&self, other: &Vector3d<U>) -> U {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+}
+impl<U: Scalar> Dot<Normal3d<U>, U> for Normal3d<U> {
+    fn dot(&self, other: &Normal3d<U>) -> U {
+        self.x * other.x + self.y * other.y + self.z * other.z
     }
 }
 
@@ -420,6 +426,12 @@ fn test_vector_2d_dot() {
     let v1 = Vector2d::new(1.0, 1.0);
     let v2 = Vector2d::new(1.0, 1.0);
     assert_eq!(v1.dot(&v2), 2.0);
+}
+#[test]
+fn test_vector_2d_abs_dot() {
+    let v1 = Vector2d::new(1.0, 1.0);
+    let v2 = Vector2d::new(-1.0, -1.0);
+    assert_eq!(v1.abs_dot(&v2), 2.0);
 }
 #[test]
 fn test_vector_2d_squared_length() {
@@ -561,6 +573,12 @@ fn test_vector_3d_dot() {
     let v1 = Vector3d::new(1.0, 1.0, 1.0);
     let v2 = Vector3d::new(1.0, 1.0, 1.0);
     assert_eq!(v1.dot(&v2), 3.0);
+}
+#[test]
+fn test_vector_3d_abs_dot() {
+    let v1 = Vector3d::new(1.0, 1.0, 1.0);
+    let v2 = Vector3d::new(-1.0, -1.0, -1.0);
+    assert_eq!(v1.abs_dot(&v2), 3.0);
 }
 #[test]
 fn test_vector_3d_cross() {
@@ -748,6 +766,12 @@ fn test_normal_3d_dot() {
     let v1 = Normal3d::new(1.0, 1.0, 1.0);
     let v2 = Normal3d::new(1.0, 1.0, 1.0);
     assert_eq!(v1.dot(&v2), 3.0);
+}
+#[test]
+fn test_normal_3d_abs_dot() {
+    let v1 = Normal3d::new(1.0, 1.0, 1.0);
+    let v2 = Normal3d::new(-1.0, -1.0, -1.0);
+    assert_eq!(v1.abs_dot(&v2), 3.0);
 }
 #[test]
 fn test_normal_3d_dot_vector_3d() {
