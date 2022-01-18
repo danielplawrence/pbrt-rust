@@ -117,9 +117,6 @@ impl<T: Scalar> Vector3d<T> {
     pub fn new(x: T, y: T, z: T) -> Self {
         Vector3d { x, y, z }
     }
-    pub fn dot(&self, other: &Self) -> T {
-        self.x * other.x + self.y * other.y + self.z * other.z
-    }
     pub fn cross(&self, other: &Self) -> Self {
         Vector3d::new(self.y * other.z - self.z * other.y,
                       self.z * other.x - self.x * other.z,
@@ -255,6 +252,98 @@ impl <T: Scalar> Neg for Vector3d<T> {
     }
 }
 
+pub struct Normal3d<T> {
+    pub x: T,
+    pub y: T,
+    pub z: T
+}
+impl<T: Scalar> Normal3d<T>{
+    pub fn new(x: T, y: T, z: T) -> Self {
+        Normal3d { x, y, z }
+    }
+    pub fn squared_length(&self) -> T {
+        self.x * self.x + self.y * self.y + self.z * self.z
+    }
+    pub fn length(&self) -> T {
+        (self.squared_length()).sqrt()
+    }
+    pub fn normalized(&self) -> Self {
+        Normal3d {
+            x: (self.x / self.length()),
+            y: (self.y / self.length()),
+            z: (self.z / self.length())
+        }
+    }
+}
+pub trait Dot<T, U> {
+    fn dot(&self, other: &T) -> U;
+}
+impl<U: Scalar> Dot<Vector3d<U>, U> for Vector3d<U> {
+    fn dot(&self, other: &Vector3d<U>) -> U {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+}
+impl<U: Scalar> Dot<Normal3d<U>, U> for Vector3d<U> {
+    fn dot(&self, other: &Normal3d<U>) -> U {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+}
+impl<U: Scalar> Dot<Vector3d<U>, U> for Normal3d<U> {
+    fn dot(&self, other: &Vector3d<U>) -> U {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+}
+impl<U: Scalar> Dot<Normal3d<U>, U> for Normal3d<U> {
+    fn dot(&self, other: &Normal3d<U>) -> U {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+}
+impl<T: Scalar> Index<usize> for Normal3d<T> {
+    type Output = T;
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("Index out of bounds")
+        }
+    }
+}
+impl <T: Scalar> Add for Normal3d<T> {
+    type Output = Normal3d<T>;
+    fn add(self, other: Self) -> Self::Output {
+        Normal3d::new(self.x + other.x, self.y + other.y, self.z + other.z)
+    }
+}
+impl <T: Scalar> Sub for Normal3d<T> {
+    type Output = Normal3d<T>;
+    fn sub(self, other: Self) -> Self::Output {
+        Normal3d::new(self.x - other.x, self.y - other.y, self.z - other.z)
+    }
+}
+impl <T: Scalar> Mul<T> for Normal3d<T> {
+    type Output = Normal3d<T>;
+    fn mul(self, other: T) -> Self::Output {
+        Normal3d::new(self.x * other, self.y * other, self.z * other)
+    }
+}
+impl <T: Scalar> Div<T> for Normal3d<T> {
+    type Output = Normal3d<T>;
+    fn div(self, other: T) -> Self::Output {
+        Normal3d::new(self.x / other, self.y / other, self.z / other)
+    }
+}
+impl <T: Scalar> Neg for Normal3d<T> {
+    type Output = Normal3d<T>;
+    fn neg(self) -> Self::Output {
+        Normal3d::new(-self.x, -self.y, -self.z)
+    }
+}
+impl <T: Scalar> From<Vector3d<T>> for Normal3d<T> {
+    fn from(v: Vector3d<T>) -> Self {
+        Normal3d::new(v.x, v.y, v.z)
+    }
+}
 
 #[test]
 fn test_vector_2d() {
@@ -570,4 +659,102 @@ fn test_vector_3d_coordinate_system() {
     let (v1, v2) = v2.coordinate_system();
     assert_eq!(v1, Vector3d::new(-1.0, 0.0, 0.0));
     assert_eq!(v2, Vector3d::new(0.0, 0.0, -1.0));
+}
+#[test]
+fn test_normal_3d_new() {
+    let v = Normal3d::new(1.0, 2.0, 3.0);
+    assert_eq!(v.x, 1.0);
+    assert_eq!(v.y, 2.0);
+    assert_eq!(v.z, 3.0);
+}
+#[test]
+fn test_normal_3d_index() {
+    let v = Normal3d { x: 1.0, y: 2.0, z: 3.0 };
+    assert_eq!(v[0], 1.0);
+    assert_eq!(v[1], 2.0);
+    assert_eq!(v[2], 3.0);
+}
+#[test]
+#[should_panic]
+fn test_normal_3d_index_panic() {
+    let v = Normal3d { x: 1.0, y: 2.0, z: 3.0 };
+    assert_eq!(v[3], 3.0);
+}
+#[test]
+fn test_normal_3d_add() {
+    let v1 = Normal3d::new(1.0, 2.0, 3.0);
+    let v2 = Normal3d::new(4.0, 5.0, 6.0);
+    let v3 = v1 + v2;
+    assert_eq!(v3.x, 5.0);
+    assert_eq!(v3.y, 7.0);
+    assert_eq!(v3.z, 9.0);
+}
+#[test]
+fn test_normal_3d_sub() {
+    let v1 = Normal3d::new(1.0, 1.0, 1.0);
+    let v2 = Normal3d::new(1.0, 1.0, 1.0);
+    let v3 = v2 - v1;
+    assert_eq!(v3.x, 0.0);
+    assert_eq!(v3.y, 0.0);
+    assert_eq!(v3.z, 0.0);
+}
+#[test]
+fn test_normal_3d_neg() {
+    let v1 = Normal3d::new(1.0, 1.0, 1.0);
+    let v2 = -v1;
+    assert_eq!(v2.x, -1.0);
+    assert_eq!(v2.y, -1.0);
+    assert_eq!(v2.z, -1.0);
+}
+#[test]
+fn test_normal_3d_mul() {
+    let v1 = Normal3d::new(1.0, 1.0, 1.0);
+    let v2 = v1 * 2.0;
+    assert_eq!(v2.x, 2.0);
+    assert_eq!(v2.y, 2.0);
+    assert_eq!(v2.z, 2.0);
+}
+#[test]
+fn test_normal_3d_div() {
+    let v1 = Normal3d::new(1.0, 1.0, 1.0);
+    let v2 = v1 / 2.0;
+    assert_eq!(v2.x, 0.5);
+    assert_eq!(v2.y, 0.5);
+    assert_eq!(v2.z, 0.5);
+}
+#[test]
+fn test_normal_3d_squared_length() {
+    let v = Normal3d::new(1.0, 1.0, 1.0);
+    assert_eq!(v.squared_length(), 3.0);
+}
+#[test]
+fn test_normal_3d_length() {
+    let v = Normal3d::new(1.0, 1.0, 1.0);
+    assert_eq!(v.length(), 3.0.sqrt());
+}
+#[test]
+fn test_normal_3d_normalized() {
+    let v = Normal3d::new(1.0, 1.0, 1.0);
+    let vn = v.normalized();
+    assert_eq!(vn.x, 1.0 / 3.0.sqrt());
+    assert_eq!(vn.y, 1.0 / 3.0.sqrt());
+    assert_eq!(vn.z, 1.0 / 3.0.sqrt());
+}
+#[test]
+fn test_normal_3d_dot() {
+    let v1 = Normal3d::new(1.0, 1.0, 1.0);
+    let v2 = Normal3d::new(1.0, 1.0, 1.0);
+    assert_eq!(v1.dot(&v2), 3.0);
+}
+#[test]
+fn test_normal_3d_dot_vector_3d() {
+    let v1 = Normal3d::new(1.0, 1.0, 1.0);
+    let v2 = Vector3d::new(1.0, 1.0, 1.0);
+    assert_eq!(v1.dot(&v2), 3.0);
+}
+#[test]
+fn test_vector_3d_dot_normal_3d() {
+    let v1 = Vector3d::new(1.0, 1.0, 1.0);
+    let v2 = Normal3d::new(1.0, 1.0, 1.0);
+    assert_eq!(v1.dot(&v2), 3.0);
 }

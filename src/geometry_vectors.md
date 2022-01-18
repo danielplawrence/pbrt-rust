@@ -1,6 +1,6 @@
-# Vectors
+# Geometry and Transformations
 
-1.1 Vectors
+## 1.1 Vectors
 
 A vector is a quantity with a magnitude and a direction. We can imagine a vector as a pointed arrow, where the direction of the arrow signals the direction of the vector, and the length of the arrow represents magnitude.
 
