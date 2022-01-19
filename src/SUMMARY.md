@@ -10,4 +10,5 @@ I am writing them primarily to aid my own understanding, but also in the hope th
   - [Vectors](geometry_vectors.md)
   - [Points](geometry_points.md)
   - [Normals](geometry_normals.md)
+  - [Rays](geometry_rays.md)
 

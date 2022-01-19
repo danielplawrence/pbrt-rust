@@ -11,6 +11,21 @@ pub trait Dot<T, U: Scalar> {
     }
 }
 
+/// Flip a surface normal so that it lies in the same hemisphere as a given vector.
+/// This is useful for computing the reflection direction.
+/// This trait provides default behavior for any combination of vector types.
+pub trait FaceForward<T: Dot<T, U> + Clone + Neg<Output = T>, U: Scalar>: Dot<T, U> {
+    fn face_forward(&self, other: T) -> T {
+        if self.dot(&other) < zero() {
+            other.clone()
+        } else {
+            -other.clone()
+        }
+    }
+}
+/// Implements the FaceForward trait for any combination of vector types.
+impl<U: Scalar, T: Dot<T, U> + Clone + Neg<Output = T>, V: Dot<T, U>> FaceForward<T, U> for V{}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Vector2d<T> {
     pub x: T,
@@ -272,7 +287,7 @@ impl<U: Scalar> Dot<Normal3d<U>, U> for Vector3d<U> {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 }
-
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Normal3d<T> {
     pub x: T,
     pub y: T,
@@ -682,6 +697,24 @@ fn test_vector_3d_coordinate_system() {
     assert_eq!(v2, Vector3d::new(0.0, 0.0, -1.0));
 }
 #[test]
+fn test_vector_3d_face_forward_vector() {
+    let v = Vector3d::new(1.0, 1.0, 1.0);
+    let v2 = Vector3d::new(1.0, 1.0, 1.0);
+    let vf = v.face_forward(v2);
+    assert_eq!(vf.x, -1.0);
+    assert_eq!(vf.y, -1.0);
+    assert_eq!(vf.z, -1.0);
+}
+#[test]
+fn test_vector_3d_face_forward_normal() {
+    let v = Vector3d::new(1.0, 1.0, 1.0);
+    let v2 = Normal3d::new(1.0, 1.0, 1.0);
+    let vf = v.face_forward(v2);
+    assert_eq!(vf.x, -1.0);
+    assert_eq!(vf.y, -1.0);
+    assert_eq!(vf.z, -1.0);
+}
+#[test]
 fn test_normal_3d_new() {
     let v = Normal3d::new(1.0, 2.0, 3.0);
     assert_eq!(v.x, 1.0);
@@ -784,4 +817,22 @@ fn test_vector_3d_dot_normal_3d() {
     let v1 = Vector3d::new(1.0, 1.0, 1.0);
     let v2 = Normal3d::new(1.0, 1.0, 1.0);
     assert_eq!(v1.dot(&v2), 3.0);
+}
+#[test]
+fn test_normal_3d_faceforward_vector() {
+    let n = Normal3d::new(1.0, 1.0, 1.0);
+    let v = Vector3d::new(1.0, 1.0, 1.0);
+    let nf = n.face_forward(v);
+    assert_eq!(nf.x, -1.0);
+    assert_eq!(nf.y, -1.0);
+    assert_eq!(nf.z, -1.0);
+}
+#[test]
+fn test_normal_3d_faceforward_normal() {
+    let n = Normal3d::new(1.0, 1.0, 1.0);
+    let v = Normal3d::new(1.0, 1.0, 1.0);
+    let nf = n.face_forward(v);
+    assert_eq!(nf.x, -1.0);
+    assert_eq!(nf.y, -1.0);
+    assert_eq!(nf.z, -1.0);
 }
