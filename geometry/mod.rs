@@ -3,6 +3,7 @@ use std::ops::*;
 use std::fmt::Debug;
 pub mod vector;
 pub mod point;
+pub mod ray;
 
 /// Describes the shared behavior of scalar types in the geometry module.
 /// This allows us to define generic Vector and Point types which can support
@@ -20,25 +21,38 @@ Div<Output=Self> +
 Signed +
 Neg<Output=Self>{
     fn sqrt(self) -> Self;
+    fn inf() -> Self;
 }
 impl Scalar for f64{
     fn sqrt(self) -> Self {
         self.sqrt()
+    }
+    fn inf() -> Self {
+        f64::INFINITY
     }
 }
 impl Scalar for i64{
     fn sqrt(self) -> Self {
         (self as f64).sqrt() as i64
     }
+    fn inf() -> Self {
+        i64::MAX
+    }
 }
 impl Scalar for f32{
     fn sqrt(self) -> Self {
         self.sqrt()
     }
+    fn inf() -> Self {
+        f32::INFINITY
+    }
 }
 impl Scalar for i32{
     fn sqrt(self) -> Self {
         ((self as f64).sqrt() as i64).try_into().unwrap()
+    }
+    fn inf() -> Self {
+        i32::MAX
     }
 }
 #[test]

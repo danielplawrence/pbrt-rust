@@ -3,7 +3,7 @@ use num::Float;
 
 use super::{Scalar, vector::{Vector2d, Vector3d}};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Point2d<T> {
     pub x: T,
     pub y: T,
@@ -95,7 +95,7 @@ impl<T: Scalar> Index<usize> for Point2d<T> {
         }
     }
 }
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Point3d<T> {
     pub x: T,
     pub y: T,

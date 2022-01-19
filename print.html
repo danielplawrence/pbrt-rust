@@ -84,7 +84,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="geometry_and_transformations.html"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="geometry_vectors.html"><strong aria-hidden="true">1.1.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="geometry_points.html"><strong aria-hidden="true">1.2.</strong> Points</a></li><li class="chapter-item expanded "><a href="geometry_normals.html"><strong aria-hidden="true">1.3.</strong> Normals</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="geometry_and_transformations.html"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="geometry_vectors.html"><strong aria-hidden="true">1.1.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="geometry_points.html"><strong aria-hidden="true">1.2.</strong> Points</a></li><li class="chapter-item expanded "><a href="geometry_normals.html"><strong aria-hidden="true">1.3.</strong> Normals</a></li><li class="chapter-item expanded "><a href="geometry_rays.html"><strong aria-hidden="true">1.4.</strong> Rays</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -688,7 +688,143 @@ We can interpolate between two points by imagining a straight line between them,
 <p align="center">
     <img src="images/normal_vector.png" style="background-color: white" width="200">
 </p>
-<p>Normals look a lot like vectors, but behave differently, particularly when it comes to transformations. My Rust implementation of pbrt will follow the original implementation in defining them as a separate type, <code>Normal3d</code>.</p>
+<p>Normals look a lot like vectors, but behave differently, particularly when it comes to transformations. My Rust implementation of pbrt will follow the original implementation in defining them as a separate type, <code>Normal3d</code>.
+<code>Normal3d</code> includes all of the functionality of <code>Vector3d</code>, with the exception of the cross product. </p>
+<p>The c++ pbrt implementation also includes a method called <code>FaceForward</code>, which flips a surface normal so that it lies in the same hemisphere as a given vector. This is implemented for all four combinations of Normals and Vectors, and provides an opportunity to further experiment with Rust generics. Here's the <code>FaceForward</code> trait:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Flip a surface normal so that it lies in the same hemisphere as a given vector.
+/// This is useful for computing the reflection direction.
+/// This trait provides default behavior for any combination of vector types.
+pub trait FaceForward&lt;T: Dot&lt;T, U&gt; + Clone + Neg&lt;Output = T&gt;, U: Scalar&gt;: Dot&lt;T, U&gt; {
+    fn face_forward(&amp;self, other: T) -&gt; T {
+        if self.dot(&amp;other) &lt; zero() {
+            other.clone()
+        } else {
+            -other.clone()
+        }
+    }
+}
+/// Implements the FaceForward trait for any combination of vector types.
+impl&lt;U: Scalar, T: Dot&lt;T, U&gt; + Clone + Neg&lt;Output = T&gt;, V: Dot&lt;T, U&gt;&gt; FaceForward&lt;T, U&gt; for V{}
+<span class="boring">}
+</span></code></pre></pre>
+<p>This trait provides default behaviour for any type which can perform a dot() operation with some other type, where that type can be cloned and negated.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="geometry-and-transformations-4"><a class="header" href="#geometry-and-transformations-4">Geometry and Transformations</a></h1>
+<h2 id="14-rays"><a class="header" href="#14-rays">1.4 Rays</a></h2>
+<p>A ray is a semi-infinite line specified by a point \(o\) representing its origin and a vector \(d\) representing its direction.</p>
+<p align="center">
+    <img src="images/ray_point_vector.svg" style="background-color: white" width="200">
+</p>
+<p>The parametric form of a ray expresses it as a function of a scalar value \(t\), giving the set of points that the ray passes through: </p>
+<p>\[
+r(t) = o + td  \quad   0 \le t &lt; \infty
+\]</p>
+<p>The <code>Ray</code> class implements an <code>at(t)</code> method, allowing a caller to retrieve a point along the ray:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span>
+<span class="boring">fn main() {
+</span>pub struct Ray&lt;T&gt; {
+    pub origin: Point3d&lt;T&gt;,
+    pub direction: Vector3d&lt;T&gt;,
+    pub t_max: Cell&lt;T&gt;,
+    pub time: T
+}
+impl&lt;T: Scalar&gt; Ray&lt;T&gt; { 
+    pub fn new(origin: Point3d&lt;T&gt;, direction: Vector3d&lt;T&gt;, tmax: T, time: T) -&gt; Self {
+        Ray {
+            origin,
+            direction,
+            t_max: Cell::new(tmax),
+            time
+        }
+    }
+    pub fn default() -&gt; Self {
+        Ray {
+            origin: Point3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            direction: Vector3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            t_max: Cell::new(T::inf()),
+            time: T::zero()
+        }
+    }
+    pub fn at(&amp;self, t: T) -&gt; Point3d&lt;T&gt; {
+        self.origin + self.direction * t
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>As with the c++ implementation, the <code>Ray</code> struct provides an all-argument constructor as well as a <code>default()</code> which sets the origin, direction and time values to 0, and t_max to infinity. The Ray also includes a member variable that limits the ray to a segment along its infinite extent. This field, tMax, allows us to restrict the ray to a segment of points. Following the c++ pbrt implementation, this fields needs to be mutable to allow a caller to modify it (this will be useful when recording the points where the ray intersects with an object). In order to make a single field mutable in rust, we need to use the <code>Cell&lt;T&gt;</code> struct. This will allow a caller to set and get the value using the <code>set</code> and <code>get</code> methods on <code>Cell&lt;T&gt;</code>.</p>
+<h1 id="142-ray-differentials"><a class="header" href="#142-ray-differentials">1.4.2 Ray Differentials</a></h1>
+<p>The c++ pbrt implementation includes a subclass of <code>Ray</code> with additional information about two auxiliary rays. These extra rays represent camera rays offset by one sample in the \(x\) and \(y\) direction from the main ray on the film plane. By moving the <code>Ray</code> methods out to a trait and implementing them for both <code>Ray</code> and <code>RayDifferential</code>, we can enable geometry methods which act on both <code>Rays</code> and <code>RayDifferentials</code> without caring which underlying type they are dealing with. Here's what the <code>RayMethods</code> trait looks like:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>trait RayMethods&lt;T&gt; {
+    fn origin(&amp;self) -&gt; Point3d&lt;T&gt;;
+    fn direction(&amp;self) -&gt; Vector3d&lt;T&gt;;
+    fn at(&amp;self, t: T) -&gt; Point3d&lt;T&gt;;
+    fn t_max(&amp;self) -&gt; &amp;Cell&lt;T&gt;;
+    fn time(&amp;self) -&gt; T;
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>We can then add impl blocks returning the appropriate fields for both <code>Ray</code> and <code>RayDifferential</code>. <code>RayDifferential</code> has a few extra fields and methods:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct RayDifferential&lt;T&gt; {
+    pub origin: Point3d&lt;T&gt;,
+    pub direction: Vector3d&lt;T&gt;,
+    pub t_max: Cell&lt;T&gt;,
+    pub time: T,
+    pub rx_origin: Point3d&lt;T&gt;,
+    pub ry_origin: Point3d&lt;T&gt;,
+    pub rx_direction: Vector3d&lt;T&gt;,
+    pub ry_direction: Vector3d&lt;T&gt;,
+    pub has_differentials: bool
+}
+impl&lt;T: Scalar&gt; RayDifferential&lt;T&gt; {
+    pub fn new(origin: Point3d&lt;T&gt;, direction: Vector3d&lt;T&gt;, tmax: T, time: T) -&gt; Self {
+        RayDifferential {
+            origin: origin,
+            direction: direction,
+            rx_origin: Point3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            rx_direction: Vector3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            ry_origin: Point3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            ry_direction: Vector3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            t_max: Cell::new(tmax),
+            time: time,
+            has_differentials: false
+        }
+    }
+    pub fn default() -&gt; Self {
+        RayDifferential {
+            origin: Point3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            direction: Vector3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            rx_origin: Point3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            rx_direction: Vector3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            ry_origin: Point3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            ry_direction: Vector3d::&lt;T&gt;::new(T::zero(), T::zero(), T::zero()),
+            t_max: Cell::new(T::inf()),
+            time: T::zero(),
+            has_differentials: false
+        }
+    }
+    pub fn from_ray(ray: &amp;Ray&lt;T&gt;) -&gt; Self {
+        RayDifferential::new(ray.origin, ray.direction, ray.t_max.get(), ray.time)
+    }
+    pub fn scale_differentials(&amp;mut self, s: T) {
+        self.rx_origin = self.origin + (self.rx_origin - self.origin) * s;
+        self.ry_origin = self.origin + (self.ry_origin - self.origin) * s;
+        self.rx_direction = self.direction + (self.rx_direction - self.direction) * s;
+        self.ry_direction = self.direction + (self.ry_direction - self.direction) * s;
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>The <code>RayDifferential</code> the <code>rx_</code> fields describe origin and direction information about these rays, and the 'ScaleDifferentials' method updates the differential rays for an estimated sample spacing of s. Finally, a <code>from_ray_</code> constructor allows us to create a <code>RayDifferential</code> from a <code>Ray</code>.</p>
 
                     </main>
 
