@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Normals - pbrt-rust</title>
+        <title>Bounding Boxes - pbrt-rust</title>
 
 
         <!-- Custom HTML head -->
@@ -83,7 +83,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="geometry_and_transformations.html"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="geometry_vectors.html"><strong aria-hidden="true">1.1.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="geometry_points.html"><strong aria-hidden="true">1.2.</strong> Points</a></li><li class="chapter-item expanded "><a href="geometry_normals.html" class="active"><strong aria-hidden="true">1.3.</strong> Normals</a></li><li class="chapter-item expanded "><a href="geometry_rays.html"><strong aria-hidden="true">1.4.</strong> Rays</a></li><li class="chapter-item expanded "><a href="bounding_boxes.html"><strong aria-hidden="true">1.5.</strong> Bounding Boxes</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="geometry_and_transformations.html"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="geometry_vectors.html"><strong aria-hidden="true">1.1.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="geometry_points.html"><strong aria-hidden="true">1.2.</strong> Points</a></li><li class="chapter-item expanded "><a href="geometry_normals.html"><strong aria-hidden="true">1.3.</strong> Normals</a></li><li class="chapter-item expanded "><a href="geometry_rays.html"><strong aria-hidden="true">1.4.</strong> Rays</a></li><li class="chapter-item expanded "><a href="bounding_boxes.html" class="active"><strong aria-hidden="true">1.5.</strong> Bounding Boxes</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -144,48 +144,16 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="geometry-and-transformations"><a class="header" href="#geometry-and-transformations">Geometry and Transformations</a></h1>
-<h2 id="13-normals"><a class="header" href="#13-normals">1.3 Normals</a></h2>
-<p>A normal vector is a vector which is perpendicular to a surface at particular point. To calculate it, we take the cross product of any two nonparallel vectors which are tangent to the surface at a point.</p>
-<p>For example, in the diagram below, C is a normal vector of the plane formed by A and B:</p>
-<p align="center">
-    <img src="images/normal_vector.png" style="background-color: white" width="200">
-</p>
-<p>Normals look a lot like vectors, but behave differently, particularly when it comes to transformations. My Rust implementation of pbrt will follow the original implementation in defining them as a separate type, <code>Normal3d</code>.
-<code>Normal3d</code> includes all of the functionality of <code>Vector3d</code>, with the exception of the cross product. </p>
-<p>The c++ pbrt implementation also includes a method called <code>FaceForward</code>, which flips a surface normal so that it lies in the same hemisphere as a given vector. This is implemented for all four combinations of Normals and Vectors, and provides an opportunity to further experiment with Rust generics. Here's the <code>FaceForward</code> trait:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Flip a surface normal so that it lies in the same hemisphere as a given vector.
-/// This is useful for computing the reflection direction.
-/// This trait provides default behavior for any combination of vector types.
-pub trait FaceForward&lt;T: Dot&lt;T, U&gt; + Clone + Neg&lt;Output = T&gt;, U: Scalar&gt;: Dot&lt;T, U&gt; {
-    fn face_forward(&amp;self, other: T) -&gt; T {
-        if self.dot(&amp;other) &lt; zero() {
-            other.clone()
-        } else {
-            -other.clone()
-        }
-    }
-}
-/// Implements the FaceForward trait for any combination of vector types.
-impl&lt;U: Scalar, T: Dot&lt;T, U&gt; + Clone + Neg&lt;Output = T&gt;, V: Dot&lt;T, U&gt;&gt; FaceForward&lt;T, U&gt; for V{}
-<span class="boring">}
-</span></code></pre></pre>
-<p>This trait provides default behaviour for any type which can perform a dot() operation with some other type, where that type can be cloned and negated.</p>
+                        <h1 id="bounding-boxes"><a class="header" href="#bounding-boxes">Bounding Boxes</a></h1>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="geometry_points.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="geometry_rays.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="geometry_rays.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -193,13 +161,10 @@ impl&lt;U: Scalar, T: Dot&lt;T, U&gt; + Clone + Neg&lt;Output = T&gt;, V: Dot&lt
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="geometry_points.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="geometry_rays.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="geometry_rays.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
             </nav>
 
         </div>

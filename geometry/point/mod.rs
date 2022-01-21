@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub, Mul, Index};
+use std::ops::{Add, Sub, Mul, Index, Div};
 use num::Float;
 
 use super::{Scalar, vector::{Vector2d, Vector3d}};
@@ -83,6 +83,13 @@ impl<T: Scalar> Sub<Point2d<T>> for Point2d<T> {
     type Output = Vector2d<T>;
     fn sub(self, other: Self) -> Self::Output {
         Vector2d{x: self.x - other.x, y: self.y - other.y}
+    }
+}
+impl<T: Scalar> Div<T> for Point2d<T> {
+    type Output = Self;
+    fn div(self, other: T) -> Self {
+        let recip = T::one() / other;
+        Point2d{x: self.x * recip, y: self.y * recip}
     }
 }
 impl<T: Scalar> Index<usize> for Point2d<T> {
@@ -175,6 +182,13 @@ impl<T: Scalar> Sub<Point3d<T>> for Point3d<T> {
     type Output = Vector3d<T>;
     fn sub(self, other: Self) -> Self::Output {
         Vector3d{x: self.x - other.x, y: self.y - other.y, z: self.z - other.z}
+    }
+}
+impl<T: Scalar> Div<T> for Point3d<T> {
+    type Output = Self;
+    fn div(self, other: T) -> Self {
+        let recip = T::one() / other;
+        Point3d{x: self.x * recip, y: self.y * recip, z: self.z * recip}
     }
 }
 impl<T: Scalar> Index<usize> for Point3d<T> {
@@ -280,6 +294,13 @@ fn test_point_2d_mul_scalar() {
     let q = p * 2.0;
     assert_eq!(q.x, 2.0);
     assert_eq!(q.y, 2.0);
+}
+#[test]
+fn test_point_2d_div_scalar() {
+    let p = Point2d::new(2.0, 2.0);
+    let q = p / 2.0;
+    assert_eq!(q.x, 1.0);
+    assert_eq!(q.y, 1.0);
 }
 #[test]
 fn test_point_2d_lerp_p1() {
@@ -504,4 +525,12 @@ fn test_point_3d_ceil() {
     assert_eq!(q.x, 2.0);
     assert_eq!(q.y, 3.0);
     assert_eq!(q.z, 4.0);
+}
+#[test]
+fn test_point_3d_div_scalar() {
+    let p = Point3d::new(1.0, 1.0, 1.0);
+    let r = p / 2.0;
+    assert_eq!(r.x, 0.5);
+    assert_eq!(r.y, 0.5);
+    assert_eq!(r.z, 0.5);
 }
