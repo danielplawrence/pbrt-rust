@@ -12,4 +12,5 @@ I am writing them primarily to aid my own understanding, but also in the hope th
   - [Normals](geometry_normals.md)
   - [Rays](geometry_rays.md)
   - [Bounding Boxes](geometry_bounding_boxes.md)
+  - [Transformations](geometry_transformations.md)
 
