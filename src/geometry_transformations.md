@@ -275,7 +275,7 @@ It's useful to start with the z-axis, because we've actually already covered the
     \end{bmatrix}
 \\]
 
-To derive the remaining matrices, we can go back to our original interpretation of rotation as finding the sides of triangles. However, this time we will fix x (which we can imagine projects out of the screen toward us), and manipulatethe y and z axes.
+To derive the remaining matrices, we can go back to our original interpretation of rotation as finding the sides of triangles. However, this time we will fix x (which we can imagine projects out of the screen toward us), and manipulate the y and z axes.
 
 <p align="center">
     <img src="images/rotating_basis_vectors_triangles_x.png" style="background-color: white" width="400">
