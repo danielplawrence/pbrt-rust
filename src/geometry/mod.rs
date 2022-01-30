@@ -5,6 +5,7 @@ pub mod vector;
 pub mod point;
 pub mod ray;
 pub mod bounds;
+pub mod transform;
 /// Describes the shared behavior of scalar types in the geometry module.
 /// This allows us to define generic Vector and Point types which can support
 /// both integer and floating point types.
