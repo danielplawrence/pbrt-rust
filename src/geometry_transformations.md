@@ -837,3 +837,137 @@ This means that the transform can be applied to a vector as follows:
     let expected = Vector3d::new(2.0, 6.0, 12.0);
     assert_eq!(&t * v, expected);
 ```
+
+## Applying the transformations
+
+The `Mul` operator is implemented for the following types:
+
+### `Point3d`
+
+We perform matrix multiplication with the the point and transformation matrix. By including the third column of the matrix we implicitly capture the \\(w\\) value of the homogeneous representation of our point. We then convert from the homogeneous representation back to nonhomogeneous by dividing by \\(w\\). This division is skipped if we know the \\(w\\) value is one.
+
+```rust
+impl<T: Scalar> Mul<Point3d<T>> for Matrix4x4<T> {
+    type Output = Point3d<T>;
+    fn mul(self, other: Point3d<T>) -> Point3d<T> {
+        let x = other.x;
+        let y = other.y;
+        let z = other.z;
+        let xp = self[0][0] * x + self[0][1] * y + self[0][2] * z + self[0][3];
+        let yp = self[1][0] * x + self[1][1] * y + self[1][2] * z + self[1][3];
+        let zp = self[2][0] * x + self[2][1] * y + self[2][2] * z + self[2][3];
+        let wp = self[3][0] * x + self[3][1] * y + self[3][2] * z + self[3][3];
+        if wp == T::one(){
+            return Point3d{
+                x: xp,
+                y: yp,
+                z: zp
+            }
+        } else{
+            return Point3d{
+                x: xp / wp,
+                y: yp / wp,
+                z: zp / wp
+            }
+        }
+    }
+}
+```
+### `Vector3d`
+
+This works the same way as the `Point3d`, but we can skip adding a term for the third column of the matrix, as we know \\(w\\) is 0.
+
+```rust
+impl<T: Scalar> Mul<Vector3d<T>> for Matrix4x4<T> {
+    type Output = Vector3d<T>;
+    fn mul(self, other: Vector3d<T>) -> Vector3d<T> {
+        let x = other.x;
+        let y = other.y;
+        let z = other.z;
+        return Vector3d{
+            x: x * self[0][0] + y * self[1][0] + z * self[2][0],
+            y: x * self[0][1] + y * self[1][1] + z * self[2][1],
+            z: x * self[0][2] + y * self[1][2] + z * self[2][2],
+        }
+    }
+}
+```
+### `Normal3d`
+
+It turns out that surface normals can't be transformed as straightforwardly as vectors and points, because non-uniform scaling can result in the normal being non-perpendicular. Figure 10 shows this:
+
+<p align="center">
+    <img src="images/transform_normal.svg" style="background-color: white" width="400">
+</p>
+
+*Figure 10: Transforming surface normals. (a) is the original circle, with the normal at a point represented by the arrow. (b) shows what happens when the circle is scaled to be half as tall in the \\(y\\) direction -- if we just treat the normal as a vector, it will no longer be perpendicular to the surface. (c) shows the desired outcome -- after scaling, the normal should remain perpendicular to the surface.*
+
+To find the transform for a normal vector given the transform matrix for a point, we can use the inverse of the transpose of the transformation matrix. The intuition for this is that:
+
+- We want this matrix to preserve the rotations of the point being transformed. The inverse transpose meets this need because the transpose of the inverse of a rotation matrix is the same rotation matrix.
+
+- We want the scaling applied to the normal to be *proportionally inverse* to the scaling of the point being transformed. To vizualize this, consider what happens if we stretch a sphere out to be twice as long in the X axis as it is on the Y and Z axes. The surface of the shape is now twice as large, so the curvature is half of what it used to be. The inverse transpose satisfies this requirement because it will invert the scaling factor.
+
+The implementation looks like this (note the indices, which result in the transpose of the inverse):
+
+```rust
+impl<T: Scalar> Mul<Normal3d<T>> for &Transform<T> {
+    type Output = Normal3d<T>;
+    fn mul(self, rhs: Normal3d<T>) -> Normal3d<T> {
+        let x = rhs.x;
+        let y = rhs.y;
+        let z = rhs.z;
+        return Normal3d::new(
+            self.m_inv.data[0][0] * x + self.m_inv.data[1][0] * y + self.m_inv.data[2][0] * z,
+            self.m_inv.data[0][1] * x + self.m_inv.data[1][1] * y + self.m_inv.data[2][1] * z,
+            self.m_inv.data[0][2] * x + self.m_inv.data[1][2] * y + self.m_inv.data[2][2] * z,
+        );
+    }
+}
+```
+
+### `Ray`
+For rays, we just transform the origin and direction, and copy the remaining data members:
+
+```rust
+impl<T: Scalar> Mul<Ray<T>> for &Transform<T> {
+    type Output = Ray<T>;
+    fn mul(self, rhs: Ray<T>) -> Ray<T> {
+        return Ray{
+            origin: self * rhs.origin,
+            direction: self * rhs.direction,
+            t_max: rhs.t_max,
+            time: rhs.time
+        };
+    }
+}
+```
+
+### `Bounds3d`
+
+For bounds, we transform the bounding points and construct a new `Bounds3d` from them:
+
+```rust
+impl<T: Scalar> Mul<Bounds3d<T>> for &Transform<T> {
+    type Output = Bounds3d<T>;
+    fn mul(self, rhs: Bounds3d<T>) -> Bounds3d<T> {
+        let p_min = self * rhs.min;
+        let p_max = self * rhs.max;
+        return Bounds3d::new(p_min, p_max);
+    }
+}
+```
+
+### `Transform`
+
+We additionally allow transforms to be composed, by multiplying them together.
+To do this, we just multiply their matricies and inverses:
+
+```rust
+impl<T: Scalar> Mul<Transform<T>> for &Transform<T> {
+    type Output = Transform<T>;
+    fn mul(self, rhs: Transform<T>) -> Transform<T> {
+        return Transform{m: self.m * rhs.m, m_inv: rhs.m_inv * self.m_inv};
+    }
+}
+```
