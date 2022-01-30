@@ -8,7 +8,8 @@ trait RayMethods<T> {
     fn t_max(&self) -> &Cell<T>;
     fn time(&self) -> T;
 }
-pub struct Ray<T> {
+#[derive(Debug, Clone, PartialEq)]
+pub struct Ray<T: Scalar> {
     pub origin: Point3d<T>,
     pub direction: Vector3d<T>,
     pub t_max: Cell<T>,

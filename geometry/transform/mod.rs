@@ -869,3 +869,31 @@ fn test_transform_mul_vector() {
     let expected = Vector3d::new(2.0, 6.0, 12.0);
     assert_eq!(&t * v, expected);
 }
+#[test]
+fn test_transform_mul_point() {
+    let t = Transform::scale(2.0, 3.0, 4.0);
+    let p = Point3d::new(1.0, 2.0, 3.0);
+    let expected = Point3d::new(2.0, 6.0, 12.0);
+    assert_eq!(&t * p, expected);
+}
+#[test]
+fn test_transform_mul_transform() {
+    let t1 = Transform::scale(2.0, 3.0, 4.0);
+    let t2 = Transform::scale(3.0, 2.0, 1.0);
+    let expected = Transform::scale(6.0, 6.0, 4.0);
+    assert_eq!(&t1 * t2, expected);
+}
+#[test]
+fn test_transform_mul_normal() {
+    let t = Transform::scale(2.0, 3.0, 4.0);
+    let n = Normal3d::new(1.0, 2.0, 3.0);
+    let expected = Normal3d::new(2.0, 6.0, 12.0);
+    assert_eq!(&t * n, expected);
+}
+#[test]
+fn test_transform_mul_ray() {
+    let t = Transform::scale(2.0, 3.0, 4.0);
+    let r = Ray::new(Point3d::new(1.0, 2.0, 3.0), Vector3d::new(1.0, 0.0, 0.0), 0.0, 0.0);
+    let expected = Ray::new(Point3d::new(2.0, 6.0, 12.0), Vector3d::new(2.0, 0.0, 0.0), 0.0, 0.0);
+    assert_eq!(&t * r, expected);
+}
