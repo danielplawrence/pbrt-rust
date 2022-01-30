@@ -863,6 +863,141 @@ impl&lt;T: Scalar&gt; Mul&lt;Vector3d&lt;T&gt;&gt; for &amp;Transform&lt;T&gt; {
     assert_eq!(&amp;t * v, expected);
 <span class="boring">}
 </span></code></pre></pre>
+<h2 id="applying-the-transformations"><a class="header" href="#applying-the-transformations">Applying the transformations</a></h2>
+<p>The <code>Mul</code> operator is implemented for the following types:</p>
+<h3 id="point3d"><a class="header" href="#point3d"><code>Point3d</code></a></h3>
+<p>We perform matrix multiplication with the the point and transformation matrix. By including the third column of the matrix we implicitly capture the \(w\) value of the homogeneous representation of our point. We then convert from the homogeneous representation back to nonhomogeneous by dividing by \(w\). This division is skipped if we know the \(w\) value is one.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Mul&lt;Point3d&lt;T&gt;&gt; for Matrix4x4&lt;T&gt; {
+    type Output = Point3d&lt;T&gt;;
+    fn mul(self, other: Point3d&lt;T&gt;) -&gt; Point3d&lt;T&gt; {
+        let x = other.x;
+        let y = other.y;
+        let z = other.z;
+        let xp = self[0][0] * x + self[0][1] * y + self[0][2] * z + self[0][3];
+        let yp = self[1][0] * x + self[1][1] * y + self[1][2] * z + self[1][3];
+        let zp = self[2][0] * x + self[2][1] * y + self[2][2] * z + self[2][3];
+        let wp = self[3][0] * x + self[3][1] * y + self[3][2] * z + self[3][3];
+        if wp == T::one(){
+            return Point3d{
+                x: xp,
+                y: yp,
+                z: zp
+            }
+        } else{
+            return Point3d{
+                x: xp / wp,
+                y: yp / wp,
+                z: zp / wp
+            }
+        }
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h3 id="vector3d"><a class="header" href="#vector3d"><code>Vector3d</code></a></h3>
+<p>This works the same way as the <code>Point3d</code>, but we can skip adding a term for the third column of the matrix, as we know \(w\) is 0.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Mul&lt;Vector3d&lt;T&gt;&gt; for Matrix4x4&lt;T&gt; {
+    type Output = Vector3d&lt;T&gt;;
+    fn mul(self, other: Vector3d&lt;T&gt;) -&gt; Vector3d&lt;T&gt; {
+        let x = other.x;
+        let y = other.y;
+        let z = other.z;
+        return Vector3d{
+            x: x * self[0][0] + y * self[1][0] + z * self[2][0],
+            y: x * self[0][1] + y * self[1][1] + z * self[2][1],
+            z: x * self[0][2] + y * self[1][2] + z * self[2][2],
+        }
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h3 id="normal3d"><a class="header" href="#normal3d"><code>Normal3d</code></a></h3>
+<p>It turns out that surface normals can't be transformed as straightforwardly as vectors and points, because non-uniform scaling can result in the normal being non-perpendicular. Figure 10 shows this:</p>
+<p align="center">
+    <img src="images/transform_normal.svg" style="background-color: white" width="400">
+</p>
+<p><em>Figure 10: Transforming surface normals. (a) is the original circle, with the normal at a point represented by the arrow. (b) shows what happens when the circle is scaled to be half as tall in the \(y\) direction -- if we just treat the normal as a vector, it will no longer be perpendicular to the surface. (c) shows the desired outcome -- after scaling, the normal should remain perpendicular to the surface.</em></p>
+<p>To find the transform for a normal vector given the transform matrix for a point, we can use the inverse of the transpose of the transformation matrix. The intuition for this is that:</p>
+<ul>
+<li>
+<p>We want this matrix to preserve the rotations of the point being transformed. The inverse transpose meets this need because the transpose of the inverse of a rotation matrix is the same rotation matrix.</p>
+</li>
+<li>
+<p>We want the scaling applied to the normal to be <em>proportionally inverse</em> to the scaling of the point being transformed. To vizualize this, consider what happens if we stretch a sphere out to be twice as long in the X axis as it is on the Y and Z axes. The surface of the shape is now twice as large, so the curvature is half of what it used to be. The inverse transpose satisfies this requirement because it will invert the scaling factor.</p>
+</li>
+</ul>
+<p>The implementation looks like this (note the indices, which result in the transpose of the inverse):</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Mul&lt;Normal3d&lt;T&gt;&gt; for &amp;Transform&lt;T&gt; {
+    type Output = Normal3d&lt;T&gt;;
+    fn mul(self, rhs: Normal3d&lt;T&gt;) -&gt; Normal3d&lt;T&gt; {
+        let x = rhs.x;
+        let y = rhs.y;
+        let z = rhs.z;
+        return Normal3d::new(
+            self.m_inv.data[0][0] * x + self.m_inv.data[1][0] * y + self.m_inv.data[2][0] * z,
+            self.m_inv.data[0][1] * x + self.m_inv.data[1][1] * y + self.m_inv.data[2][1] * z,
+            self.m_inv.data[0][2] * x + self.m_inv.data[1][2] * y + self.m_inv.data[2][2] * z,
+        );
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h3 id="ray"><a class="header" href="#ray"><code>Ray</code></a></h3>
+<p>For rays, we just transform the origin and direction, and copy the remaining data members:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Mul&lt;Ray&lt;T&gt;&gt; for &amp;Transform&lt;T&gt; {
+    type Output = Ray&lt;T&gt;;
+    fn mul(self, rhs: Ray&lt;T&gt;) -&gt; Ray&lt;T&gt; {
+        return Ray{
+            origin: self * rhs.origin,
+            direction: self * rhs.direction,
+            t_max: rhs.t_max,
+            time: rhs.time
+        };
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h3 id="bounds3d"><a class="header" href="#bounds3d"><code>Bounds3d</code></a></h3>
+<p>For bounds, we transform the bounding points and construct a new <code>Bounds3d</code> from them:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Mul&lt;Bounds3d&lt;T&gt;&gt; for &amp;Transform&lt;T&gt; {
+    type Output = Bounds3d&lt;T&gt;;
+    fn mul(self, rhs: Bounds3d&lt;T&gt;) -&gt; Bounds3d&lt;T&gt; {
+        let p_min = self * rhs.min;
+        let p_max = self * rhs.max;
+        return Bounds3d::new(p_min, p_max);
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h3 id="transform"><a class="header" href="#transform"><code>Transform</code></a></h3>
+<p>We additionally allow transforms to be composed, by multiplying them together.
+To do this, we just multiply their matricies and inverses:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Mul&lt;Transform&lt;T&gt;&gt; for &amp;Transform&lt;T&gt; {
+    type Output = Transform&lt;T&gt;;
+    fn mul(self, rhs: Transform&lt;T&gt;) -&gt; Transform&lt;T&gt; {
+        return Transform{m: self.m * rhs.m, m_inv: rhs.m_inv * self.m_inv};
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
 
                     </main>
 
