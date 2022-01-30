@@ -3,6 +3,8 @@ use std::{ops::{Index, Mul}};
 
 use num::Float;
 
+use crate::geometry::bounds::Bounds3d;
+
 use super::{Scalar, vector::{Vector3d, Normal3d}, point::Point3d, ray::Ray};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -261,100 +263,69 @@ impl<T: Scalar> Mul<T> for Matrix4x4<T> {
 impl<T: Scalar> Mul<Matrix4x4<T>> for Vector3d<T> {
     type Output = Vector3d<T>;
     fn mul(self, other: Matrix4x4<T>) -> Vector3d<T> {
-        let mut data: [T;3] = [T::zero();3];
-        for i in 0..3{
-            data[i] = self[0] * other[0][i] + 
-                    self[1] * other[1][i] + 
-                    self[2] * other[2][i];
-        }
-        return Vector3d{
-            x: data[0],
-            y: data[1],
-            z: data[2]
-        }
+        return other * self;
     }
 }
 impl<T: Scalar> Mul<Matrix4x4<T>> for Point3d<T> {
     type Output = Point3d<T>;
     fn mul(self, other: Matrix4x4<T>) -> Point3d<T> {
-        let mut data: [T;3] = [T::zero();3];
-        for i in 0..3{
-            data[i] = self[0] * other[0][i] + 
-                    self[1] * other[1][i] + 
-                    self[2] * other[2][i] + 
-                    other[3][i];
-        }
-        return Point3d{
-            x: data[0],
-            y: data[1],
-            z: data[2]
-        }
+        return other * self;
     }
 }
 impl<T: Scalar> Mul<Matrix4x4<T>> for Normal3d<T> {
     type Output = Normal3d<T>;
     fn mul(self, other: Matrix4x4<T>) -> Normal3d<T> {
-        let mut data: [T;4] = [T::zero();4];
-        for i in 0..4{
-            data[i] = self[0] * other[0][i] + 
-                    self[1] * other[1][i] + 
-                    self[2] * other[2][i] + 
-                    self[3] * other[3][i];
-        }
-        return Normal3d{
-            x: data[0],
-            y: data[1],
-            z: data[2],
-        }
+        return other * self;
     }
 }
 impl<T: Scalar> Mul<Vector3d<T>> for Matrix4x4<T> {
     type Output = Vector3d<T>;
     fn mul(self, other: Vector3d<T>) -> Vector3d<T> {
-        let mut data: [T;3] = [T::zero();3];
-        for i in 0..3{
-            data[i] = self[0][i] * other[0] + 
-                    self[1][i] * other[1] + 
-                    self[2][i] * other[2];
-        }
+        let x = other.x;
+        let y = other.y;
+        let z = other.z;
         return Vector3d{
-            x: data[0],
-            y: data[1],
-            z: data[2]
+            x: x * self[0][0] + y * self[1][0] + z * self[2][0],
+            y: x * self[0][1] + y * self[1][1] + z * self[2][1],
+            z: x * self[0][2] + y * self[1][2] + z * self[2][2],
         }
     }
 }
 impl<T: Scalar> Mul<Point3d<T>> for Matrix4x4<T> {
     type Output = Point3d<T>;
     fn mul(self, other: Point3d<T>) -> Point3d<T> {
-        let mut data: [T;3] = [T::zero();3];
-        for i in 0..3{
-            data[i] = self[0][i] * other[0] + 
-                    self[1][i] * other[1] + 
-                    self[2][i] * other[2] + 
-                    self[3][i];
-        }
-        return Point3d{
-            x: data[0],
-            y: data[1],
-            z: data[2]
+        let x = other.x;
+        let y = other.y;
+        let z = other.z;
+        let xp = self[0][0] * x + self[0][1] * y + self[0][2] * z + self[0][3];
+        let yp = self[1][0] * x + self[1][1] * y + self[1][2] * z + self[1][3];
+        let zp = self[2][0] * x + self[2][1] * y + self[2][2] * z + self[2][3];
+        let wp = self[3][0] * x + self[3][1] * y + self[3][2] * z + self[3][3];
+        if wp == T::one(){
+            return Point3d{
+                x: xp,
+                y: yp,
+                z: zp
+            }
+        } else{
+            return Point3d{
+                x: xp / wp,
+                y: yp / wp,
+                z: zp / wp
+            }
         }
     }
 }
 impl<T: Scalar> Mul<Normal3d<T>> for Matrix4x4<T> {
     type Output = Normal3d<T>;
     fn mul(self, other: Normal3d<T>) -> Normal3d<T> {
-        let mut data: [T;4] = [T::zero();4];
-        for i in 0..4{
-            data[i] = self[0][i] * other[0] + 
-                    self[1][i] * other[1] + 
-                    self[2][i] * other[2] + 
-                    self[3][i];
-        }
+        let x = other.x;
+        let y = other.y;
+        let z = other.z;
         return Normal3d{
-            x: data[0],
-            y: data[1],
-            z: data[2],
+            x: x * self[0][0] + y * self[1][0] + z * self[2][0],
+            y: x * self[0][1] + y * self[1][1] + z * self[2][1],
+            z: x * self[0][2] + y * self[1][2] + z * self[2][2],
         }
     }
 }
@@ -396,6 +367,13 @@ impl<T: Scalar + Float> Transform<T> {
             T::zero(), T::zero(), T::zero(), T::one()
         );
         return self.m.eq(&identity);
+    }
+    pub fn swaps_handedness(&self) -> bool {
+        let det = 
+        self.m[0][0] * (self.m[1][1] * self.m[2][2] - self.m[1][2] * self.m[2][1]) -
+        self.m[0][1] * (self.m[1][0] * self.m[2][2] - self.m[1][2] * self.m[2][0]) +
+        self.m[0][2] * (self.m[1][0] * self.m[2][1] - self.m[1][1] * self.m[2][0]);
+        return det < T::zero();
     }
     pub fn translate(delta: Vector3d<T>) -> Transform<T> {
         let m = Matrix4x4::from_values(
@@ -528,7 +506,14 @@ impl<T: Scalar> Mul<Vector3d<T>> for &Transform<T> {
 impl<T: Scalar> Mul<Normal3d<T>> for &Transform<T> {
     type Output = Normal3d<T>;
     fn mul(self, rhs: Normal3d<T>) -> Normal3d<T> {
-        return self.m * rhs;
+        let x = rhs.x;
+        let y = rhs.y;
+        let z = rhs.z;
+        return Normal3d::new(
+            self.m_inv.data[0][0] * x + self.m_inv.data[1][0] * y + self.m_inv.data[2][0] * z,
+            self.m_inv.data[0][1] * x + self.m_inv.data[1][1] * y + self.m_inv.data[2][1] * z,
+            self.m_inv.data[0][2] * x + self.m_inv.data[1][2] * y + self.m_inv.data[2][2] * z,
+        );
     }
 }
 impl<T: Scalar> Mul<Ray<T>> for &Transform<T> {
@@ -540,6 +525,14 @@ impl<T: Scalar> Mul<Ray<T>> for &Transform<T> {
             t_max: rhs.t_max,
             time: rhs.time
         };
+    }
+}
+impl<T: Scalar> Mul<Bounds3d<T>> for &Transform<T> {
+    type Output = Bounds3d<T>;
+    fn mul(self, rhs: Bounds3d<T>) -> Bounds3d<T> {
+        let p_min = self * rhs.min;
+        let p_max = self * rhs.max;
+        return Bounds3d::new(p_min, p_max);
     }
 }
 #[test]
@@ -887,7 +880,7 @@ fn test_transform_mul_transform() {
 fn test_transform_mul_normal() {
     let t = Transform::scale(2.0, 3.0, 4.0);
     let n = Normal3d::new(1.0, 2.0, 3.0);
-    let expected = Normal3d::new(2.0, 6.0, 12.0);
+    let expected = Normal3d::new(0.5, 0.6666666666666666, 0.75);
     assert_eq!(&t * n, expected);
 }
 #[test]
@@ -896,4 +889,21 @@ fn test_transform_mul_ray() {
     let r = Ray::new(Point3d::new(1.0, 2.0, 3.0), Vector3d::new(1.0, 0.0, 0.0), 0.0, 0.0);
     let expected = Ray::new(Point3d::new(2.0, 6.0, 12.0), Vector3d::new(2.0, 0.0, 0.0), 0.0, 0.0);
     assert_eq!(&t * r, expected);
+}
+#[test]
+fn test_transform_bounds() {
+    let t = Transform::scale(2.0, 3.0, 4.0);
+    let b = Bounds3d::new(Point3d::new(1.0, 2.0, 3.0), Point3d::new(4.0, 6.0, 8.0));
+    let expected = Bounds3d::new(Point3d::new(2.0, 6.0, 12.0), Point3d::new(8.0, 18.0, 32.0));
+    assert_eq!(&t * b, expected);
+}
+#[test]
+fn test_transform_swaps_handedness_true() {
+    let t = Transform::scale(1.0, -1.0, 1.0);
+    assert!(t.swaps_handedness());
+}
+#[test]
+fn test_transform_swaps_handedness_false() {
+    let t = Transform::scale(1.0, 1.0, 1.0);
+    assert!(!t.swaps_handedness());
 }
