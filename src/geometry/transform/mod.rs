@@ -534,7 +534,12 @@ impl<T: Scalar> Mul<Normal3d<T>> for &Transform<T> {
 impl<T: Scalar> Mul<Ray<T>> for &Transform<T> {
     type Output = Ray<T>;
     fn mul(self, rhs: Ray<T>) -> Ray<T> {
-        return Ray{origin: self * rhs.origin, direction: self * rhs.direction};
+        return Ray{
+            origin: self * rhs.origin,
+            direction: self * rhs.direction,
+            t_max: rhs.t_max,
+            time: rhs.time
+        };
     }
 }
 #[test]
@@ -856,4 +861,11 @@ fn test_has_scale_true() {
 fn test_has_scale_false() {
     let t = Transform::<f64>::default();
     assert!(!t.has_scale());
+}
+#[test]
+fn test_transform_mul_vector() {
+    let t = Transform::scale(2.0, 3.0, 4.0);
+    let v = Vector3d::new(1.0, 2.0, 3.0);
+    let expected = Vector3d::new(2.0, 6.0, 12.0);
+    assert_eq!(&t * v, expected);
 }

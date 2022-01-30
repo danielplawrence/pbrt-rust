@@ -802,3 +802,38 @@ impl<T: Scalar + Float> Transform<T> {
         return Transform{m, m_inv: m.inverse()};
     }
 ```
+
+The c++ pbrt implementation overloads the function operator to apply transforms, but rust does not allow this (it also does not allow method overloading).
+To work around this, I have overloaded the `Mul` operator for the types which we will want to apply transformations to. For example, for `Vector3d`, we provide a `Mul` implementation for a matrix and a vector, then for a vector and a transform as follows:
+
+```rust
+impl<T: Scalar> Mul<Vector3d<T>> for Matrix4x4<T> {
+    type Output = Vector3d<T>;
+    fn mul(self, other: Vector3d<T>) -> Vector3d<T> {
+        let mut data: [T;3] = [T::zero();3];
+        for i in 0..3{
+            data[i] = self[0][i] * other[0] + 
+                    self[1][i] * other[1] + 
+                    self[2][i] * other[2];
+        }
+        return Vector3d{
+            x: data[0],
+            y: data[1],
+            z: data[2]
+        }
+    }
+}
+impl<T: Scalar> Mul<Vector3d<T>> for &Transform<T> {
+    type Output = Vector3d<T>;
+    fn mul(self, rhs: Vector3d<T>) -> Vector3d<T> {
+        return self.m * rhs;
+    }
+}
+```
+This means that the transform can be applied to a vector as follows:
+```rust
+    let t = Transform::scale(2.0, 3.0, 4.0);
+    let v = Vector3d::new(1.0, 2.0, 3.0);
+    let expected = Vector3d::new(2.0, 6.0, 12.0);
+    assert_eq!(&t * v, expected);
+```
