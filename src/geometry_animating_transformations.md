@@ -197,7 +197,7 @@ Figure 4 visualizes the spherical linear interpolation problem. Our aim is to fi
     <img src="images/slerp_2.png" style="background-color: white" width="500">
 </p>
 
-To solve the problem, we find a quaternion orthogonal to \\(q_0\\),  \\(q_\bot\\). Then we just need to find the base and height of the triangle formed between \\(q_1\\) and \\(q_0\\) -- this is given by \\(q(t) = v_0 \cos\theta' + v_1 \sin\theta'\\).
+To solve the problem, we find a quaternion orthogonal to \\(q_0\\),  \\(q_\bot\\). Then we just need to find the base and height of the triangle formed between \\(q_1\\) and \\(q_0\\) -- this is given by \\(q(t) = q_0 \cos\theta' + q_1 \sin\theta'\\).
 
 To find \\(q_\bot\\), we project \\(q_1\\) on to \\(q_0\\) then subtract the orthogonal projection from q1. This is exactly the same pattern we used in the transformations section, when rotating a vector around an arbitrary axis:
 
