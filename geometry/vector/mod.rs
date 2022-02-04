@@ -84,6 +84,9 @@ impl<T: Scalar> Vector2d<T> {
             1
         }
     }
+    pub fn approximately_equal(&self, other: &Self) -> bool {
+        self.x.approximately_equal(other.x) && self.y.approximately_equal(other.y)
+    }
 }
 impl<T: Scalar> Index<usize> for Vector2d<T> {
     type Output = T;
@@ -234,6 +237,11 @@ impl<T: Scalar> Vector3d<T> {
         };
         (self.cross(&y), y)
     }
+    pub fn approximately_equal(&self, other: &Self) -> bool {
+        self.x.approximately_equal(other.x) &&
+        self.y.approximately_equal(other.y) &&
+        self.z.approximately_equal(other.z)
+    }
 }
 impl<T: Scalar> Index<usize> for Vector3d<T> {
     type Output = T;
@@ -309,6 +317,11 @@ impl<T: Scalar> Normal3d<T>{
             y: (self.y / self.length()),
             z: (self.z / self.length())
         }
+    }
+    pub fn approximately_equal(&self, other: &Self) -> bool {
+        self.x.approximately_equal(other.x) &&
+        self.y.approximately_equal(other.y) &&
+        self.z.approximately_equal(other.z)
     }
 }
 impl<T: Scalar> Index<usize> for Normal3d<T> {
@@ -506,6 +519,14 @@ fn test_vector_2d_max_dimension() {
     assert_eq!(v.max_dimension(), 1);
     let v2 = Vector2d::new(2.0, 1.0);
     assert_eq!(v2.max_dimension(), 0);
+}
+#[test]
+fn test_vector_2d_approximately_equal() {
+    let v1 = Vector2d::new(1.0, 2.0);
+    let v2 = Vector2d::new(1.0, 2.0);
+    assert!(v1.approximately_equal(&v2));
+    let v3 = Vector2d::new(1.0, 2.0 + 1e-6);
+    assert!(v1.approximately_equal(&v3));
 }
 #[test]
 fn test_vector_3d() {
@@ -715,6 +736,12 @@ fn test_vector_3d_face_forward_normal() {
     assert_eq!(vf.z, -1.0);
 }
 #[test]
+fn test_vector_3d_approximately_equal() {
+    let v1 = Vector3d::new(1.0, 1.0, 1.0);
+    let v2 = Vector3d::new(1.000001, 1.000001,1.000001);
+    assert!(v1.approximately_equal(&v2));
+}
+#[test]
 fn test_normal_3d_new() {
     let v = Normal3d::new(1.0, 2.0, 3.0);
     assert_eq!(v.x, 1.0);
@@ -835,4 +862,10 @@ fn test_normal_3d_faceforward_normal() {
     assert_eq!(nf.x, -1.0);
     assert_eq!(nf.y, -1.0);
     assert_eq!(nf.z, -1.0);
+}
+#[test]
+fn test_normal_3d_approximately_equal() {
+    let n1 = Normal3d::new(1.0, 1.0, 1.0);
+    let n2 = Normal3d::new(1.0, 1.0, 1.0 + 1e-6);
+    assert!(n1.approximately_equal(&n2));
 }

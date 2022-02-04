@@ -353,6 +353,9 @@ impl<T: Scalar + Float> Transform<T> {
     pub fn new(m: Matrix4x4<T>, m_inv: Matrix4x4<T>) -> Self {
         return Transform { m, m_inv }
     }
+    pub fn matrix(&self) -> &Matrix4x4<T> {
+        return &self.m;
+    }
     pub fn inverse(&self) -> Self {
         return Transform { m: self.m_inv, m_inv: self.m };
     }

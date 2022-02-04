@@ -6,6 +6,8 @@ pub mod point;
 pub mod ray;
 pub mod bounds;
 pub mod transform;
+pub mod quaternion;
+
 /// Describes the shared behavior of scalar types in the geometry module.
 /// This allows us to define generic Vector and Point types which can support
 /// both integer and floating point types.
@@ -40,6 +42,10 @@ Neg<Output=Self>{
     fn two() -> Self {
         Self::one() + Self::one()
     }
+    fn approximately_equal(self, other: Self) -> bool {
+        (self - other).abs() < Self::epsilon()
+    }
+    fn epsilon() -> Self;
 }
 impl Scalar for f64{
     fn sqrt(self) -> Self {
@@ -47,6 +53,9 @@ impl Scalar for f64{
     }
     fn inf() -> Self {
         f64::INFINITY
+    }
+    fn epsilon() -> Self {
+        0.00001
     }
 }
 impl Scalar for i64{
@@ -56,6 +65,9 @@ impl Scalar for i64{
     fn inf() -> Self {
         i64::MAX
     }
+    fn epsilon() -> Self {
+        1
+    }
 }
 impl Scalar for f32{
     fn sqrt(self) -> Self {
@@ -64,6 +76,9 @@ impl Scalar for f32{
     fn inf() -> Self {
         f32::INFINITY
     }
+    fn epsilon() -> Self {
+        0.00001
+    }
 }
 impl Scalar for i32{
     fn sqrt(self) -> Self {
@@ -71,6 +86,9 @@ impl Scalar for i32{
     }
     fn inf() -> Self {
         i32::MAX
+    }
+    fn epsilon() -> Self {
+        1
     }
 }
 #[test]
@@ -136,4 +154,24 @@ fn test_f32_max(){
 #[test]
 fn test_i32_max(){
     assert_eq!(Scalar::max(1, 2), 2);
+}
+#[test]
+fn test_f64_approximately_equal(){
+    assert!(f64::approximately_equal(1.0, 1.0));
+    assert!(!f64::approximately_equal(1.0, 2.0));
+}
+#[test]
+fn test_i64_approximately_equal(){
+    assert!(Scalar::approximately_equal(1, 1));
+    assert!(!Scalar::approximately_equal(1, 2));
+}
+#[test]
+fn test_f32_approximately_equal(){
+    assert!(f32::approximately_equal(1.0, 1.0));
+    assert!(!f32::approximately_equal(1.0, 2.0));
+}
+#[test]
+fn test_i32_approximately_equal(){
+    assert!(Scalar::approximately_equal(1, 1));
+    assert!(!Scalar::approximately_equal(1, 2));
 }
