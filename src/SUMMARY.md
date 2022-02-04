@@ -13,4 +13,5 @@ I am writing them primarily to aid my own understanding, but also in the hope th
   - [Rays](geometry_rays.md)
   - [Bounding Boxes](geometry_bounding_boxes.md)
   - [Transformations](geometry_transformations.md)
+  - [Animating Transformations](geometry_animating_transformations.md)
 
