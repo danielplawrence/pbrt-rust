@@ -231,4 +231,149 @@ impl<T: Scalar + Float > Quaternion<T> {
 
 ### AnimatedTransform Implementation
 
-Keyframe animation is implemented using the `AnimatedTransform` class. 
+Keyframe animation is implemented using the `AnimatedTransform` class. This class is constructed from two `Transform` instances which describe the start and end points of the animation, and a `start_time` and `end_time` which describe the time range of the movement. The struct definition looks like this:
+
+```rust
+pub struct AnimatedTransform<T> {
+    start_transform: Transform<T>,
+    end_transform: Transform<T>,
+    start_time: T,
+    end_time: T,
+    translations: [Vector3d<T>; 2],
+    scales: [Matrix4x4<T>; 2],
+    rotations: [Quaternion<T>; 2],
+}
+```
+The `translations`, `scales` and `rotations` arrays hold the decomposition of the start and endpoints into their component transforms. This is achieved through a `decompose()` method which is invoked from the `AnimatedTransform` constructor. 
+
+The `decompose()` method decomposes a transformation into its rotation, scaling, and translation components. It is not possible to know the exact transformations which actually generated a given composite transformation -- for example, given the matrix for the product of a translation and then a scale, an equal matrix could also be computed by first scaling and then translating (by different amounts). So instead, we treat all transformations as being composed of the same sequence:
+
+\\[
+        M = TRS
+\\]
+
+Where \\(M\\) is the transformation, \\(T\\) is a translation, \\(R\\) is a rotation, and \\(S\\) is scaling.
+
+To find the translation \\(T\\), we just take the right-hand column of the input matrix:
+
+\\[
+    \begin{bmatrix}
+    1 & 0 & 0 & M_{03} \\\\
+    0 & 1 & 0 & M_{13} \\\\
+    0 & 0 & 1 & M_{23} \\\\
+    0 & 0 & 0 & 1 \\\\
+    \end{bmatrix}
+\\]
+
+If we remove the translation component from the input matrix, we get a 3x3 matrix representing the scaling and rotation. To decompose this into the scaling and rotation matrices, we use a technique called *polar decomposition*. First, we extract the scaling matrix \\(S\\) by iteratively averating \\(M\\) with its inverse transpose until convergence. So we repeat this equation:
+
+\\[
+          M_i + 1 = \frac{1}{2}(M_i + (M^T_i)^{-1} )
+\\]
+
+until the difference between \\(M_i\\) and \\(M_{i+1}\\) is a very small value.
+
+Once we have the scaling matrix \\(S\\), we need to find \\(R\\) where \\(SR = M\\). We can get this by applying the matrix inverse as follows:
+
+\\[
+        R = S^{-1}M
+\\]
+
+In code, the `decompose()` method looks like this:
+
+```rust
+impl<T: Scalar + Float> AnimatedTransform<T> {
+    ...
+    pub fn decompose(matrix: Matrix4x4<T>) -> (Vector3d<T>, Quaternion<T>, Matrix4x4<T>){
+        // Extract translation
+        let translation = Vector3d::new(
+            matrix.data[0][3],
+            matrix.data[1][3],
+            matrix.data[2][3]
+        );
+        // Compute rotation
+        let mut rotation = Matrix4x4::default();
+        let mut norm;
+        let mut count = 0;
+        loop {
+            count+=1;
+            let mut next = Matrix4x4::default();
+            // Compute average of matrix and its inverse transpose 
+            let r_inverse_transpose = matrix.inverse().transpose();
+            for i in 0..3 {
+                for j in 0..3 {
+                    next.data[i][j] = (matrix.data[i][j] + r_inverse_transpose.data[j][i]) * (T::two() / T::one());
+                }
+            }
+            // Compute norm of difference -- when this is small enough, we're done
+            norm = T::zero();
+            for i in 0..3 {
+                let n  = (matrix.data[i][0] - next.data[i][0]).abs() + 
+                (matrix.data[i][1] - matrix.data[i][1]).abs() + 
+                (matrix.data[i][2] - matrix.data[i][2]).abs();
+                norm = Scalar::max(norm, n);
+            }
+            rotation = next;
+            if norm < Scalar::epsilon() || count > 100 {
+                break;
+            }
+        }
+        // At this point, next contains the scale and rotation part of the matrix
+        // To compute the scale, we need to find the matrix that satisfies 
+        // the equation M = RS. To get this, we just multiply M with the 
+        // inverse of R
+        let scale = matrix * matrix.inverse().transpose();
+        let rotation_qat = Quaternion::from_transform(&Transform::new(rotation, rotation.transpose()));
+        return (translation, rotation_qat, scale);
+    }
+}
+```
+The `decompose()` method is invoked in the `AnimatedTransform` constructor, once for the `start_transform` and once for the `end_transform`. The results are stored on the `AnimatedTransform` instance to be used in the `interpolate()` method.
+
+To perform the interpolation, we interpolate between each of the translation, scaling and rotation components, then multiply them together.
+
+To interpolate a translation, we can interpolate linearly between the two vectors, using this formula:
+
+\\[
+        interpolated(V_1, V_2, t) = V_1(1 - t) + V_2t
+\\]
+
+This is similar to the linear interpolation formula introduced in the chapter on points -- one way to think about it is that we are treating the interpolation parameter \\(t\\) as a weight, which should give us \\(V_2\\) when the value is 1, some 'mix' of \\(V_1\\) and \\(V_2\\) when it is an intermediate value, and \\(V_1\\) when the value is 0. 
+
+To interpolate a scaling matrix, we can similarly interpolate linearly between the elements of the matrix:
+
+\\[
+        interpolated(A, B, t) = \\\\
+        \begin{bmatrix}
+        A_{00}(1 - t) + B_{00}t&A_{01}(1 - t) + B_{01}t&A_{02}(1 - t) + B_{02}t&A_{03}(1 - t) + B_{03}t\\\\
+        A_{10}(1 - t) + B_{10}t&A_{11}(1 - t) + B_{11}t&A_{12}(1 - t) + B_{12}t&A_{03}(1 - t) + B_{13}t\\\\
+        A_{20}(1 - t) + B_{20}t&A_{21}(1 - t) + B_{21}t&A_{22}(1 - t) + B_{22}t&A_{03}(1 - t) + B_{23}t\\\\
+        A_{30}(1 - t) + B_{30}t&A_{31}(1 - t) + B_{31}t&A_{32}(1 - t) + B_{32}t&A_{03}(1 - t) + B_{33}t\\\\
+        \end{bmatrix}
+\\]
+
+To interpolate between the rotation quaterions, we use the Slerp procedure described in the chapter on Quaternions.
+The final code for interpolating between transformations is shown below. It includes additional handling for boundary conditions -- if the interpolation parameter is outside the range of this `AnimatedTransform`, the value for the closest endpoint will be returned. Additionally, if the `AnimatedTransform` has the same start and end transformations, the starting point will be returned.
+
+```rust
+impl<T: Scalar + Float> AnimatedTransform<T> {
+    ...
+    pub fn interpolate(&self, time: T) -> Transform<T> {
+        if !self.actually_animated {
+            return self.start_transform.clone();
+        }
+        let mut t = (time - self.start_time) / (self.end_time - self.start_time);
+        if t < T::zero() {
+            t = T::zero();
+        }
+        if t > T::one() {
+            t = T::one();
+        }
+        let translation = Transform::translate(self.translations[0] * (T::one() - t) + self.translations[1] * t);
+        let scale = self.scales[0] * (T::one() - t) + self.scales[1] * t;
+        let rotation = self.rotations[0].slerp(&self.rotations[1], t);
+        let interpolated = &(&translation * rotation.to_transform()) * Transform::new(scale, scale.inverse());
+        return interpolated;
+    }
+}
+```

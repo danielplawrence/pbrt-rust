@@ -1,14 +1,14 @@
-use std::ops::{Add, Sub, Div, Mul};
+use std::ops::{Add, Sub, Div, Mul, Neg};
 use num::{clamp, Float};
 
 use crate::geometry::vector::Vector3d;
 
 use super::{Scalar, vector::Dot, transform::{Matrix4x4, Transform}};
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Quaternion<T>{
-    v: Vector3d<T>,
-    w: T,
+    pub(crate) v: Vector3d<T>,
+    pub(crate) w: T,
 }
 impl<T: Scalar + Float > Quaternion<T> {
     pub fn new(v: Vector3d<T>, w: T) -> Self {
@@ -23,7 +23,7 @@ impl<T: Scalar + Float > Quaternion<T> {
     }
     pub fn slerp(&self, other: &Self, t: T) -> Self {
         let cos_theta = self.dot(other);
-        if cos_theta  > T::one() - Scalar::epsilon() {
+        if cos_theta > (T::one() - Scalar::epsilon()) {
             return (*self * (T::one() - t) + *other * t).normalize();
         } else {
             let theta = clamp(cos_theta, -T::one(), T::one()).acos();
@@ -41,24 +41,24 @@ impl<T: Scalar + Float > Quaternion<T> {
             // 4w^2 = m[0][0] + m[1][1] + m[2][2] + m[3][3] (but m[3][3] == 1)
             let mut s = Scalar::sqrt(trace + T::one());
             let w = s / T::two();
-            s = (T::one() / T::two()) / s;
+            s = T::half() / s;
             v.x = (m[2][1] - m[1][2]) * s;
             v.y = (m[0][2] - m[2][0]) * s;
             v.z = (m[1][0] - m[0][1]) * s;
             return Self{v, w};
         } else {
             // Compute largest of $x$, $y$, or $z$, then remaining components
-            let nxt = [1, 2, 3];
+            let nxt = [1, 2, 0];
             let mut q = [T::zero(); 3];
             let mut i = 0;
             if m[1][1] > m[0][0] {i = 1};
-            if m[2][2] > m[i][i] {i = 0};
+            if m[2][2] > m[i][i] {i = 2};
             let j = nxt[i];
             let k = nxt[j];
-            let mut s = Scalar::sqrt(m[k][k] + T::one());
-            q[i] = s * (T::one() / T::two());
+            let mut s = Scalar::sqrt((m[i][i] - (m[j][j] + m[k][k])) + T::one());
+            q[i] = s * T::half();
             if s != T::zero(){
-                s = T::one() / (s * s);
+                s = T::half() / s;
             }
             let w = (m[k][j] - m[j][k]) * s;
             q[j] = (m[j][i] + m[i][j]) * s;
@@ -132,7 +132,20 @@ impl<T: Scalar> Div<T> for Quaternion<T> {
         }
     }
 }
-
+impl<T: Scalar> Neg for Quaternion<T> {
+    type Output = Quaternion<T>;
+    fn neg(self) -> Quaternion<T> {
+        Quaternion {
+            v: -self.v,
+            w: -self.w,
+        }
+    }
+}
+impl<T: Scalar> PartialEq for Quaternion<T> {
+    fn eq(&self, other: &Quaternion<T>) -> bool {
+        self.v.approximately_equal(&other.v) && self.w.approximately_equal(other.w)
+    }
+}
 #[test]
 fn test_quaternion_new() {
     let q = Quaternion::new(Vector3d::new(1.0, 2.0, 3.0), 4.0);
@@ -195,16 +208,28 @@ fn test_quaternion_div_t() {
 }
 #[test]
 fn test_quaternion_slerp() {
-    let a = Quaternion::new(Vector3d::new(1.0, 0.0, 0.0), 0.0);
-    let b = Quaternion::new(Vector3d::new(0.0, 1.0, 0.0), 0.0);
+    let a = Quaternion::new(Vector3d::new(0.0, 0.0, 0.0), 1.0); // Reference position
+    let b = Quaternion::new(Vector3d::new(0.0, 1.0, 0.0), 0.0); // -180 degree rotation around y-axis
     let mut c = a.slerp(&b, 0.0);
-    assert_eq!(c.v, Vector3d::new(1.0, 0.0, 0.0));
-    assert_eq!(c.w, 0.0);
+    assert_eq!(c.v, Vector3d::new(0.0, 0.0, 0.0));
+    assert!(c.w.approximately_equal(1.0));
     c = a.slerp(&b, 1.0);
     assert!(c.v.approximately_equal(&Vector3d::new(0.0, 1.0, 0.0)));
-    assert_eq!(c.w, 0.0);
+    assert!(c.w.approximately_equal(0.0));
     c = a.slerp(&b, 0.5);
-    assert!(c.v.approximately_equal(&Vector3d::new(0.7071, 0.7071, 0.0)));
+    assert!(c.v.approximately_equal(&Vector3d::new(0.0, 0.7071, 0.0))); // -90 degree rotation around y-axis
+    assert!(c.w.approximately_equal(0.7071));
+}
+#[test]
+fn test_quaternion_slerp_rotations() {
+    let t1 = Transform::rotate_x(0.0);
+    let q1 = Quaternion::from_transform(&t1);
+    let t2 = Transform::rotate_x(180.0);
+    let q2 = Quaternion::from_transform(&t2);
+    let t3 = Transform::rotate_x(90.0);
+    let q3 = Quaternion::from_transform(&t3);
+    let q4 = q1.slerp(&q2, 0.5);
+    assert_eq!(q3, q4);
 }
 #[test]
 fn test_quaternion_to_transform() {
@@ -237,4 +262,56 @@ fn test_quaternion_from_transform() {
     let t = p.to_transform();
     let r = Quaternion::from_transform(&t);
     assert_eq!(p, r);
+}
+#[test]
+fn test_quaternion_from_transform_x_rotation() {
+    let t = Transform::rotate_x(0.0);
+    let q = Quaternion::from_transform(&t);
+    assert_eq!(q.v, Vector3d::new(0.0, 0.0, 0.0));
+    assert_eq!(q.w, 1.0);
+    let t = Transform::rotate_x(90.0);
+    let q = Quaternion::from_transform(&t);
+    assert!(q.v.approximately_equal(&Vector3d::new(0.707106, 0.0, 0.0)));
+    assert!(q.w.approximately_equal(0.707106));
+    let t = Transform::rotate_x(180.0);
+    let q = Quaternion::from_transform(&t);
+    assert!(q.v.approximately_equal(&Vector3d::new(1.0, 0.0, 0.0)));
+    assert!(q.w.approximately_equal(0.0));
+}
+#[test]
+fn test_quaternion_from_transform_y_rotation() {
+    let t = Transform::rotate_y(0.0);
+    let q = Quaternion::from_transform(&t);
+    assert_eq!(q.v, Vector3d::new(0.0, 0.0, 0.0));
+    assert_eq!(q.w, 1.0);
+    let t = Transform::rotate_y(90.0);
+    let q = Quaternion::from_transform(&t);
+    assert!(q.v.approximately_equal(&Vector3d::new(0.0, 0.707106, 0.0)));
+    assert!(q.w.approximately_equal(0.707106));
+    let t = Transform::rotate_y(180.0);
+    let q = Quaternion::from_transform(&t);
+    assert!(q.v.approximately_equal(&Vector3d::new(0.0, 1.0, 0.0)));
+    assert!(q.w.approximately_equal(0.0));
+}
+#[test]
+fn test_quaternion_from_transform_z_rotation() {
+    let t = Transform::rotate_z(0.0);
+    let q = Quaternion::from_transform(&t);
+    assert_eq!(q.v, Vector3d::new(0.0, 0.0, 0.0));
+    assert_eq!(q.w, 1.0);
+    let t = Transform::rotate_z(90.0);
+    let q = Quaternion::from_transform(&t);
+    assert!(q.v.approximately_equal(&Vector3d::new(0.0, 0.0, 0.707106)));
+    assert!(q.w.approximately_equal(0.707106));
+    let t = Transform::rotate_z(180.0);
+    let q = Quaternion::from_transform(&t);
+    assert!(q.v.approximately_equal(&Vector3d::new(0.0, 0.0, 1.0)));
+    assert!(q.w.approximately_equal(0.0));
+}
+#[test]
+fn test_quaternion_neg() {
+    let q = Quaternion::new(Vector3d::new(1.0, 2.0, 3.0), 4.0);
+    let q_neg = -q;
+    assert_eq!(q_neg.v, Vector3d::new(-1.0, -2.0, -3.0));
+    assert_eq!(q_neg.w, -4.0);
 }

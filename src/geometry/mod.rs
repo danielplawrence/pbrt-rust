@@ -42,6 +42,9 @@ Neg<Output=Self>{
     fn two() -> Self {
         Self::one() + Self::one()
     }
+    fn half() -> Self {
+        Self::one() / Self::two()
+    }
     fn approximately_equal(self, other: Self) -> bool {
         (self - other).abs() < Self::epsilon()
     }
