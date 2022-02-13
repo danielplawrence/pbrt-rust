@@ -1,13 +1,13 @@
 
-use std::{ops::{Index, Mul}};
+use std::{ops::{Index, Mul, Add}, f64::consts::PI, cell::Cell};
 
 use num::Float;
 
 use crate::geometry::bounds::Bounds3d;
 
-use super::{Scalar, vector::{Vector3d, Normal3d}, point::Point3d, ray::Ray};
+use super::{Scalar, vector::{Vector3d, Normal3d}, point::Point3d, ray::{Ray, RayDifferential}, quaternion::Quaternion};
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Matrix4x4<T> {
     data: [[T;4]; 4]
 }
@@ -329,8 +329,34 @@ impl<T: Scalar> Mul<Normal3d<T>> for Matrix4x4<T> {
         }
     }
 }
-#[derive(Debug, PartialEq)]
-pub struct Transform<T> {
+impl<T: Scalar> Add<Matrix4x4<T>> for Matrix4x4<T> {
+    type Output = Matrix4x4<T>;
+    fn add(self, other: Matrix4x4<T>) -> Matrix4x4<T> {
+        let mut data: [[T;4];4] = [[T::zero();4];4];
+        for i in 0..4{
+            for j in 0..4{
+                data[i][j] = self.data[i][j] + other.data[i][j];
+            }
+        }
+        return Matrix4x4{
+            data
+        }
+    }
+}
+impl<T: Scalar> PartialEq for Matrix4x4<T> {
+    fn eq(&self, other: &Matrix4x4<T>) -> bool {
+        for i in 0..4{
+            for j in 0..4{
+                if self.data[i][j].approximately_equal(other.data[i][j]) == false {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+}
+#[derive(Debug, PartialEq, Clone)]
+pub struct Transform<T: Scalar> {
     m: Matrix4x4<T>,
     m_inv: Matrix4x4<T>
 }
@@ -411,9 +437,7 @@ impl<T: Scalar + Float> Transform<T> {
         return la2 != T::one() || lb2 != T::one() || lc2 != T::one();
     }
     pub fn rotate_z(angle: T) -> Self {
-        let (mut sin, mut cos) = angle.sin_cos();
-        sin = sin.to_radians();
-        cos = cos.to_radians();
+        let (sin, cos) = angle.to_radians().sin_cos();
         let m = Matrix4x4::from_values(
             cos, -sin, T::zero(), T::zero(),
             sin, cos, T::zero(), T::zero(),
@@ -425,9 +449,7 @@ impl<T: Scalar + Float> Transform<T> {
             m_inv: m.transpose()}
     }
     pub fn rotate_y(angle: T) -> Self {
-        let (mut sin, mut cos) = angle.sin_cos();
-        sin = sin.to_radians();
-        cos = cos.to_radians();
+        let (sin, cos) = angle.to_radians().sin_cos();
         let m = Matrix4x4::from_values(
             cos, T::zero(), sin, T::zero(),
             T::zero(), T::one(), T::zero(), T::zero(),
@@ -439,9 +461,7 @@ impl<T: Scalar + Float> Transform<T> {
             m_inv: m.transpose()}
     }
     pub fn rotate_x(angle: T) -> Self {
-        let (mut sin, mut cos) = angle.sin_cos();
-        sin = sin.to_radians();
-        cos = cos.to_radians();
+        let (sin, cos) = angle.to_radians().sin_cos();
         let m = Matrix4x4::from_values(
             T::one(), T::zero(), T::zero(), T::zero(),
             T::zero(), cos, -sin, T::zero(),
@@ -454,9 +474,7 @@ impl<T: Scalar + Float> Transform<T> {
     }
     pub fn rotate(angle: T, axis: Vector3d<T>) -> Transform<T> {
         let a = axis.normalized();
-        let (mut sin, mut cos) = angle.sin_cos();
-        sin = sin.to_radians();
-        cos = cos.to_radians();
+        let (sin, cos) = angle.to_radians().sin_cos();
         let mut m = Matrix4x4::default();
         // Compute rotation of first basis vector
         m.data[0][0] = a.x * a.x + (T::one() - a.x * a.x) * cos;
@@ -530,12 +548,148 @@ impl<T: Scalar> Mul<Ray<T>> for &Transform<T> {
         };
     }
 }
+impl<T: Scalar> Mul<RayDifferential<T>> for &Transform<T> {
+    type Output = RayDifferential<T>;
+    fn mul(self, rhs: RayDifferential<T>) -> RayDifferential<T> {
+        return RayDifferential{
+            origin: self * rhs.origin,
+            direction: self * rhs.direction,
+            rx_origin: self * rhs.rx_origin,
+            ry_origin: self * rhs.ry_origin,
+            rx_direction: self * rhs.rx_direction,
+            ry_direction: self * rhs.ry_direction,
+            has_differentials: rhs.has_differentials,
+            time: rhs.time,
+            t_max: rhs.t_max
+        };
+    }
+}
 impl<T: Scalar> Mul<Bounds3d<T>> for &Transform<T> {
     type Output = Bounds3d<T>;
     fn mul(self, rhs: Bounds3d<T>) -> Bounds3d<T> {
         let p_min = self * rhs.min;
         let p_max = self * rhs.max;
         return Bounds3d::new(p_min, p_max);
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct AnimatedTransform<T: Scalar> {
+    start_transform: Transform<T>,
+    end_transform: Transform<T>,
+    start_time: T,
+    end_time: T,
+    translations: [Vector3d<T>; 2],
+    scales: [Matrix4x4<T>; 2],
+    rotations: [Quaternion<T>; 2],
+    actually_animated: bool,
+}
+impl<T: Scalar + Float> AnimatedTransform<T> {
+    pub fn new(start_transform: Transform<T>, end_transform: Transform<T>, start_time: T, end_time: T) -> Self {
+        let (start_translation, start_rotation, start_scale) = 
+        AnimatedTransform::decompose(start_transform.m);
+        let (end_translation, end_rotation, end_scale) = 
+        AnimatedTransform::decompose(end_transform.m);
+        let translations = [start_translation, end_translation];
+        let scales = [start_scale, end_scale];
+        let mut rotations = [start_rotation, end_rotation];
+        // Flip the second rotation if needed to select shortest path
+        if start_rotation.dot(&end_rotation) < T::zero() {
+            rotations[1] = -rotations[1];
+        }
+        return AnimatedTransform{
+            start_transform: start_transform.clone(),
+            end_transform: end_transform.clone(),
+            start_time,
+            end_time,
+            translations,
+            scales,
+            rotations,
+            actually_animated: start_transform != end_transform,
+        };
+    }
+    pub fn decompose(matrix: Matrix4x4<T>) -> (Vector3d<T>, Quaternion<T>, Matrix4x4<T>) {
+        // Extract translation
+        let translation = Vector3d::new(
+            matrix.data[0][3],
+            matrix.data[1][3],
+            matrix.data[2][3]
+        );
+        // Compute new transformation matrix with translation removed
+        let mut m = matrix;
+        m.data[0][3] = T::zero();
+        m.data[1][3] = T::zero();
+        m.data[2][3] = T::zero();
+        m.data[3][3] = T::one();
+        // Compute rotation
+        let mut norm;
+        let mut count = 0;
+        let mut rotation = m;
+        loop {
+            let mut next = Matrix4x4::default();
+            // Compute average of matrix and its inverse transpose 
+            let r_inverse_transpose = rotation.inverse().transpose();
+            for i in 0..4 {
+                for j in 0..4 {
+                    next.data[i][j] = T::half() * (rotation.data[i][j] + r_inverse_transpose.data[i][j])
+                }
+            }
+            // Compute norm of difference -- when this is small enough, we're done
+            norm = T::zero();
+            for i in 0..3 {
+                let n  = (rotation.data[i][0] - next.data[i][0]).abs() + 
+                (rotation.data[i][1] - next.data[i][1]).abs() + 
+                (rotation.data[i][2] - next.data[i][2]).abs();
+                norm = Scalar::max(norm, n);
+            }
+            rotation = next;
+            count+=1;
+            if norm < Scalar::epsilon() || count > 100 {
+                break;
+            }
+        }
+        // At this point, next contains the scale and rotation part of the matrix
+        // To compute the scale, we need to find the matrix that satisfies 
+        // the equation M = RS. To get this, we just multiply M with the 
+        // inverse of R
+        let scale = rotation.inverse() * m;
+        let rotation_qat = Quaternion::from_transform(&Transform::new(rotation, rotation.transpose()));
+        return (translation, rotation_qat, scale);
+    }
+    pub fn interpolate(&self, time: T) -> Transform<T> {
+        if !self.actually_animated {
+            return self.start_transform.clone();
+        }
+        let mut t = (time - self.start_time) / (self.end_time - self.start_time);
+        if t < T::zero() {
+            t = T::zero();
+        }
+        if t > T::one() {
+            t = T::one();
+        }
+        let translation = Transform::translate(self.translations[0] * (T::one() - t) + self.translations[1] * t);
+        let scale = self.scales[0] * (T::one() - t) + self.scales[1] * t;
+        let rotation = self.rotations[0].slerp(&self.rotations[1], t);
+        let interpolated = &(&translation * rotation.to_transform()) * Transform::new(scale, scale.inverse());
+        return interpolated;
+    }
+    pub fn apply_to_ray(&self, ray: Ray<T>) -> Ray<T> {
+        let ray_time = ray.time;
+        let mut interpolated_ray = &self.interpolate(ray_time) * ray;
+        interpolated_ray.time = ray_time;
+        return interpolated_ray;
+    }
+    pub fn apply_to_ray_differential(&self, ray: RayDifferential<T>) -> RayDifferential<T> {
+        let ray_time = ray.time;
+        let mut interpolated_ray = &self.interpolate(ray_time) * ray;
+        interpolated_ray.time = ray_time;
+        return interpolated_ray;
+    }
+    pub fn apply_to_point(&self, point: Point3d<T>, time: T) -> Point3d<T> {
+        return &self.interpolate(time) * point;
+    }
+    pub fn apply_to_vector(&self, vector: Vector3d<T>, time: T) -> Vector3d<T> {
+        return &self.interpolate(time) * vector;
     }
 }
 #[test]
@@ -583,6 +737,38 @@ fn test_matrix_transpose() {
         0.0, 0.0, 0.0, 0.0
     );
     assert_eq!(mat1.transpose(), mat2);
+}
+#[test]
+fn test_matrix_transpose_identity() {
+    let mat1 = Matrix4x4::from_values(
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    );
+    assert_eq!(mat1.transpose(), mat1);
+}
+#[test]
+fn test_matrix_add() {
+    let mat1 = Matrix4x4::from_values(
+        2.0, 2.0, 2.0, 2.0,
+        2.0, 2.0, 2.0, 2.0,
+        2.0, 2.0, 2.0, 2.0,
+        2.0, 2.0, 2.0, 2.0
+    );
+    let mat2 = Matrix4x4::from_values(
+        2.0, 2.0, 2.0, 2.0,
+        2.0, 2.0, 2.0, 2.0,
+        2.0, 2.0, 2.0, 2.0,
+        2.0, 2.0, 2.0, 2.0
+    );
+    let expected = Matrix4x4::from_values(
+        4.0, 4.0, 4.0, 4.0,
+        4.0, 4.0, 4.0, 4.0,
+        4.0, 4.0, 4.0, 4.0,
+        4.0, 4.0, 4.0, 4.0
+    );
+    assert_eq!(mat1 + mat2, expected);
 }
 #[test]
 fn test_matrix_mul() {
@@ -731,14 +917,14 @@ fn test_transform_scale() {
 fn test_transform_rotate_z() {
     let t = Transform::<f64>::rotate_z(90.0);
     let expected_m = Matrix4x4::from_values(
-        -0.00782035989277119, -0.015603185281673879, 0.0, 0.0,
-        0.015603185281673879, -0.00782035989277119, 0.0, 0.0,
+        0.0, -1.0, 0.0, 0.0,
+        1.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 1.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
     let expected_inv = Matrix4x4::from_values(
-        -0.00782035989277119, 0.015603185281673879, 0.0, 0.0,
-        -0.015603185281673879, -0.00782035989277119, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        -1.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 1.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
@@ -750,14 +936,14 @@ fn test_transform_rotate_x() {
     let t = Transform::<f64>::rotate_x(90.0);
     let expected_m = Matrix4x4::from_values(
         1.0, 0.0, 0.0, 0.0,
-        0.0, -0.00782035989277119, -0.015603185281673879, 0.0,
-        0.0, 0.015603185281673879, -0.00782035989277119, 0.0,
+        0.0, 0.0, -1.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
     let expected_inv = Matrix4x4::from_values(
         1.0, 0.0, 0.0, 0.0,
-        0.0, -0.00782035989277119, 0.015603185281673879, 0.0,
-        0.0, -0.015603185281673879, -0.00782035989277119, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, -1.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
     assert_eq!(t.m, expected_m);
@@ -767,15 +953,15 @@ fn test_transform_rotate_x() {
 fn test_transform_rotate_y() {
     let t = Transform::<f64>::rotate_y(90.0);
     let expected_m = Matrix4x4::from_values(
-        -0.00782035989277119, 0.0, 0.015603185281673879, 0.0,
+        0.0, 0.0, 1.0, 0.0,
         0.0, 1.0, 0.0, 0.0,
-        -0.015603185281673879, 0.0, -0.00782035989277119, 0.0,
+        -1.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
     let expected_inv = Matrix4x4::from_values(
-        -0.00782035989277119, 0.0, -0.015603185281673879, 0.0,
+        0.0, 0.0, -1.0, 0.0,
         0.0, 1.0, 0.0, 0.0,
-        0.015603185281673879, 0.0, -0.00782035989277119, 0.0,
+        1.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
     assert_eq!(t.m, expected_m);
@@ -785,15 +971,15 @@ fn test_transform_rotate_y() {
 fn test_transform_rotate_vec_y() {
     let t = Transform::<f64>::rotate(90.0, Vector3d::new(0.0, 1.0, 0.0));
     let expected_m = Matrix4x4::from_values(
-        -0.00782035989277119, 0.0, 0.015603185281673879, 0.0,
+        0.0, 0.0, 1.0, 0.0,
         0.0, 1.0, 0.0, 0.0,
-        -0.015603185281673879, 0.0, -0.00782035989277119, 0.0,
+        -1.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
     let expected_inv = Matrix4x4::from_values(
-        -0.00782035989277119, 0.0, -0.015603185281673879, 0.0,
+        0.0, 0.0, -1.0, 0.0,
         0.0, 1.0, 0.0, 0.0,
-        0.015603185281673879, 0.0, -0.00782035989277119, 0.0,
+        1.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
     assert_eq!(t.m, expected_m);
@@ -803,14 +989,14 @@ fn test_transform_rotate_vec_y() {
 fn test_transform_rotate_vec_z() {
     let t = Transform::<f64>::rotate(90.0, Vector3d::new(0.0, 0.0, 1.0));
     let expected_m = Matrix4x4::from_values(
-        -0.00782035989277119, -0.015603185281673879, 0.0, 0.0,
-        0.015603185281673879, -0.00782035989277119, 0.0, 0.0,
+        0.0, -1.0, 0.0, 0.0,
+        1.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 1.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
     let expected_inv = Matrix4x4::from_values(
-        -0.00782035989277119, 0.015603185281673879, 0.0, 0.0,
-        -0.015603185281673879, -0.00782035989277119, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        -1.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 1.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
@@ -819,17 +1005,17 @@ fn test_transform_rotate_vec_z() {
 }
 #[test]
 fn test_transform_rotate_vec_x() {
-    let t = Transform::<f64>::rotate(90.0, Vector3d::new(0.0, 1.0, 0.0));
+    let t = Transform::<f64>::rotate(90.0, Vector3d::new(1.0, 0.0, 0.0));
     let expected_m = Matrix4x4::from_values(
-        -0.00782035989277119, 0.0, 0.015603185281673879, 0.0,
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, -1.0, 0.0,
         0.0, 1.0, 0.0, 0.0,
-        -0.015603185281673879, 0.0, -0.00782035989277119, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
     let expected_inv = Matrix4x4::from_values(
-        -0.00782035989277119, 0.0, -0.015603185281673879, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.015603185281673879, 0.0, -0.00782035989277119, 0.0,
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, -1.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     );
     assert_eq!(t.m, expected_m);
@@ -909,4 +1095,167 @@ fn test_transform_swaps_handedness_true() {
 fn test_transform_swaps_handedness_false() {
     let t = Transform::scale(1.0, 1.0, 1.0);
     assert!(!t.swaps_handedness());
+}
+#[test]
+fn test_animated_transform_new() {
+    let t = AnimatedTransform::new(
+        Transform::scale(2.0, 3.0, 4.0), 
+        Transform::scale(3.0, 2.0, 1.0),
+        0.0,
+        1.0
+    );
+
+    assert_eq!(t.start_time, 0.0);
+    assert_eq!(t.end_time, 1.0);
+    assert_eq!(t.start_transform, Transform::scale(2.0, 3.0, 4.0));
+    assert_eq!(t.end_transform, Transform::scale(3.0, 2.0, 1.0));
+    assert_eq!(t.actually_animated, true);
+}
+#[test]
+fn test_animated_transform_not_actually_animated() {
+    let t = AnimatedTransform::new(
+        Transform::scale(2.0, 3.0, 4.0), 
+        Transform::scale(2.0, 3.0, 4.0),
+        0.0,
+        0.0
+    );
+    assert_eq!(t.actually_animated, false);
+}
+#[test]
+fn test_animated_transform_decompose_default() {
+    let transform = Transform::new(Matrix4x4::<f64>::default(), Matrix4x4::<f64>::default());
+    let expected = (
+        Vector3d::new(0.0, 0.0, 0.0),
+        Quaternion { v: Vector3d { x: 0.0, y: 0.0, z: 0.0 }, w: 1.0 },
+        *Transform::scale(1.0, 1.0, 1.0).matrix()
+    );
+    assert_eq!(AnimatedTransform::decompose(*transform.matrix()), expected);
+}
+#[test]
+fn test_animated_transform_decompose_translation() {
+    let transform = Transform::translate(Vector3d::new(1.0, 1.0, 1.0));
+    let expected = (
+        Vector3d::new(1.0, 1.0, 1.0),
+        Quaternion { v: Vector3d { x: 0.0, y: 0.0, z: 0.0 }, w: 1.0 },
+        *Transform::scale(1.0, 1.0, 1.0).matrix()
+    );
+    assert_eq!(AnimatedTransform::decompose(*transform.matrix()), expected);
+}
+#[test]
+fn test_animated_transform_decompose_rotation() {
+    let transform = Transform::rotate_x(PI / 2.0);
+    let expected = (
+        Vector3d::new(0.0, 0.0, 0.0),
+        Quaternion::from_transform(&Transform::rotate_x(PI / 2.0)),
+        *Transform::scale(1.0, 1.0, 1.0).matrix()
+    );
+    assert_eq!(AnimatedTransform::decompose(*transform.matrix()), expected);
+}
+#[test]
+fn test_animated_transform_decompose_scaling() {
+    let transform = Transform::scale(2.0, 2.0, 2.0);
+    let expected = (
+        Vector3d::new(0.0, 0.0, 0.0),
+        Quaternion { v: Vector3d { x: 0.0, y: 0.0, z: 0.0 }, w: 1.0 },
+        *Transform::scale(2.0, 2.0, 2.0).matrix()
+    );
+    assert_eq!(AnimatedTransform::decompose(*transform.matrix()), expected);
+}
+#[test]
+fn test_animated_transform_interpolate_translation() {
+    let t1 = Transform::translate(Vector3d::new(1.0, 1.0, 1.0));
+    let t2 = Transform::translate(Vector3d::new(3.0, 3.0, 3.0));
+    let t = AnimatedTransform::new(t1, t2, 0.0, 1.0);
+    assert_eq!(t.interpolate(1.0), Transform::translate(Vector3d::new(3.0, 3.0, 3.0)));
+    assert_eq!(t.interpolate(0.5), Transform::translate(Vector3d::new(2.0, 2.0, 2.0)));
+    assert_eq!(t.interpolate(0.0), Transform::translate(Vector3d::new(1.0, 1.0, 1.0)));
+}
+#[test]
+fn test_animated_transform_interpolate_scale() {
+    let t1 = Transform::scale(1.0, 1.0, 1.0);
+    let t2 = Transform::scale(3.0, 3.0, 3.0);
+    let t = AnimatedTransform::new(t1, t2, 0.0, 1.0);
+    assert_eq!(t.interpolate(1.0), Transform::scale(3.0, 3.0, 3.0));
+    assert_eq!(t.interpolate(0.5), Transform::scale(2.0, 2.0, 2.0));
+    assert_eq!(t.interpolate(0.0), Transform::scale(1.0, 1.0, 1.0));
+}
+#[test]
+fn test_animated_transform_interpolate_rotation() {
+    let t1 = Transform::rotate_x(0.0);
+    let t2 = Transform::rotate_x(90.0);
+    let t = AnimatedTransform::new(t1, t2, 0.0, 1.0);
+    assert_eq!(t.interpolate(1.0), Transform::rotate_x(90.0));
+    assert_eq!(t.interpolate(0.0), Transform::rotate_x(0.0));
+    assert_eq!(t.interpolate(0.5), Transform::rotate_x(45.0));
+}
+#[test]
+fn test_animated_transform_apply_to_ray() {
+    let t1 = Transform::translate(Vector3d::new(0.0, 0.0, 0.0));
+    let t2 = Transform::translate(Vector3d::new(3.0, 3.0, 3.0));
+    let t = AnimatedTransform::new(t1, t2, 0.0, 1.0);
+    let ray = Ray::new(Point3d::new(0.0, 0.0, 0.0), Vector3d::new(0.0, 0.0, 1.0), 1.0, 0.0);
+    assert_eq!(t.apply_to_ray(ray), Ray::new(Point3d::new(0.0, 0.0, 0.0), Vector3d::new(0.0, 0.0, 1.0), 1.0, 0.0));
+    let ray = Ray::new(Point3d::new(0.0, 0.0, 0.0), Vector3d::new(0.0, 0.0, 1.0), 1.0, 0.5);
+    assert_eq!(t.apply_to_ray(ray), Ray::new(Point3d::new(1.5, 1.5, 1.5), Vector3d::new(0.0, 0.0, 1.0), 1.0, 0.5));
+    let ray = Ray::new(Point3d::new(0.0, 0.0, 0.0), Vector3d::new(0.0, 0.0, 1.0), 1.0, 1.0);
+    assert_eq!(t.apply_to_ray(ray), Ray::new(Point3d::new(3.0, 3.0, 3.0), Vector3d::new(0.0, 0.0, 1.0), 1.0, 1.0));
+}
+#[test]
+fn test_animated_transform_apply_to_point() {
+    let t1 = Transform::translate(Vector3d::new(0.0, 0.0, 0.0));
+    let t2 = Transform::translate(Vector3d::new(3.0, 3.0, 3.0));
+    let t = AnimatedTransform::new(t1, t2, 0.0, 1.0);
+    assert_eq!(t.apply_to_point(Point3d::new(0.0, 0.0, 0.0), 0.0), Point3d::new(0.0, 0.0, 0.0));
+    assert_eq!(t.apply_to_point(Point3d::new(0.0, 0.0, 0.0), 1.0), Point3d::new(3.0, 3.0, 3.0));
+    assert_eq!(t.apply_to_point(Point3d::new(0.0, 0.0, 0.0), 0.5), Point3d::new(1.5, 1.5, 1.5));
+}
+#[test]
+fn test_animated_transform_apply_to_vector() {
+    let t1 = Transform::rotate_x(0.0);
+    let t2 = Transform::rotate_x(180.0);
+    let t = AnimatedTransform::new(t1, t2, 0.0, 1.0);
+    assert!(t.apply_to_vector(Vector3d::new(1.0, 1.0, 1.0), 0.0).approximately_equal(&Vector3d::new(1.0, 1.0, 1.0)));
+    assert!(t.apply_to_vector(Vector3d::new(1.0, 1.0, 1.0), 1.0).approximately_equal(&Vector3d::new(1.0, -1.0, -1.0)));
+    assert!(t.apply_to_vector(Vector3d::new(1.0, 1.0, 1.0), 0.5).approximately_equal(&Vector3d::new(1.0, 1.0, -1.0)));
+}
+#[test]
+fn test_animated_transform_apply_to_ray_differential() {
+    let t1 = Transform::translate(Vector3d::new(0.0, 0.0, 0.0));
+    let t2 = Transform::translate(Vector3d::new(3.0, 3.0, 3.0));
+    let t = AnimatedTransform::new(t1, t2, 0.0, 1.0);
+    let ray = Ray::new(Point3d::new(0.0, 0.0, 0.0), Vector3d::new(0.0, 0.0, 1.0), 1.0, 0.0);
+    let ray_differential = RayDifferential::from_ray(&ray);
+    assert_eq!(t.apply_to_ray_differential(ray_differential), RayDifferential::from_ray(&Ray::new(Point3d::new(0.0, 0.0, 0.0), Vector3d::new(0.0, 0.0, 1.0), 1.0, 0.0)));
+    let ray = Ray::new(Point3d::new(0.0, 0.0, 0.0), Vector3d::new(0.0, 0.0, 1.0), 1.0, 0.5);
+    let ray_differential = RayDifferential::from_ray(&ray);
+    assert_eq!(
+        t.apply_to_ray_differential(ray_differential),
+            RayDifferential{
+                origin: Point3d::new(1.5, 1.5, 1.5), 
+                direction: Vector3d::new(0.0, 0.0, 1.0),
+                rx_origin: Point3d::new(1.5, 1.5, 1.5),
+                rx_direction: Vector3d::new(0.0, 0.0, 0.0),
+                ry_origin: Point3d::new(1.5, 1.5, 1.5),
+                ry_direction: Vector3d::new(0.0, 0.0, 0.0),
+                time: 0.5,
+                t_max: Cell::new(1.0),
+                has_differentials: false,
+            }
+        );
+    let ray = Ray::new(Point3d::new(0.0, 0.0, 0.0), Vector3d::new(0.0, 0.0, 1.0), 1.0, 1.0);
+    let ray_differential = RayDifferential::from_ray(&ray);
+    assert_eq!(
+        t.apply_to_ray_differential(ray_differential),
+            RayDifferential{
+                origin: Point3d::new(3.0, 3.0, 3.0), 
+                direction: Vector3d::new(0.0, 0.0, 1.0),
+                rx_origin: Point3d::new(3.0, 3.0, 3.0),
+                rx_direction: Vector3d::new(0.0, 0.0, 0.0),
+                ry_origin: Point3d::new(3.0, 3.0, 3.0),
+                ry_direction: Vector3d::new(0.0, 0.0, 0.0),
+                time: 1.0,
+                t_max: Cell::new(1.0),
+                has_differentials: false,
+            }
+        );
 }

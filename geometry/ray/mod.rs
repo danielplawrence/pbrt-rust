@@ -50,7 +50,8 @@ impl<T: Scalar> RayMethods<T> for Ray<T> {
         self.time
     }
 }
-pub struct RayDifferential<T> {
+#[derive(Debug, PartialEq)]
+pub struct RayDifferential<T: Scalar> {
     pub origin: Point3d<T>,
     pub direction: Vector3d<T>,
     pub t_max: Cell<T>,
