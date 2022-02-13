@@ -2,15 +2,15 @@
 
 ## 1.7 Animating Transformations
 
-To simulate the effect of movement in our scenes, we can animate transformations. Figure 1 gives an example of the desired affect:
+To simulate the effect of movement in our scenes, we can animate transformations. Figure 1 gives an example of the desired effect:
 
 <p align="center">
     <img src="images/spinning_spheres.png" style="background-color: white" width="400">
 </p>
 
-*Figure 1: simulating the affect of movement using keyframe transformations*
+*Figure 1: simulating the effect of movement using keyframe transformations*
 
-To achieve this affect, we will allow our renderer to support the specification of *keyframe* transformations, which are associated with a point in time. This makes it possible for the camera to move and for objects in the scene to be moving during the time the simulated camera’s shutter is open. The renderer will achieve this affect by interpolating between the keyframe matrices. 
+To achieve this effect, we will allow our renderer to support the specification of *keyframe* transformations, which are associated with a point in time. This makes it possible for the camera to move and for objects in the scene to be moving during the time the simulated camera’s shutter is open. The renderer will achieve this effect by interpolating between the keyframe matrices. 
 
 In order to interpolate between transform matricies, we can use an approach called *matrix decomposition*. Given a transformation matrix \\(M\\), we decompose it into a concatenation of scale (\\(S\\)), rotation (\\(R\\)) and translation (\\(T\\)) transformations:
 
@@ -78,7 +78,7 @@ The red vector has an angle of \\(45^\circ\\), and the green vector has an angle
         (-1, 1)
 \\]
 
-The result \\(-1, 1\\) is equal to the blue vector in Figure 3, which has an angle of \\(135^\circ\\). Multiplying the complex numbers also results in the scaling of the magnitudes (not shown in this example, as we dealt with unit vectors). It turns out that the algebraic properties of complex numbers all have intuitive geometric interpretations -- multiplication applies scaling and rotation as demonstrated here; dividing has the opposite affect, and addition and subtraction work in the same way as vector addition and subtraction.
+The result \\(-1, 1\\) is equal to the blue vector in Figure 3, which has an angle of \\(135^\circ\\). Multiplying the complex numbers also results in the scaling of the magnitudes (not shown in this example, as we dealt with unit vectors). It turns out that the algebraic properties of complex numbers all have intuitive geometric interpretations -- multiplication applies scaling and rotation as demonstrated here; dividing has the opposite effect, and addition and subtraction work in the same way as vector addition and subtraction.
 
 One might think that, to extend this pattern into three dimensions, we could come up with a new kind of complex number with two imaginary parts \\(i\\) and \\(j\\), where both \\(i\\) and \\(j\\) = \\(\sqrt{-1}\\). However, it turns out that this kind of 'triple' does not have the properties we need from a number system. For example, there is no way of defining multiplication and division on these triples such that division is the inverse of multiplication. However, it **is** possible to create a number system with the desired properties by extending the complex numbers into four dimensions.
 
