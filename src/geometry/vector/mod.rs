@@ -305,6 +305,13 @@ impl<T: Scalar> Normal3d<T>{
     pub fn new(x: T, y: T, z: T) -> Self {
         Normal3d { x, y, z }
     }
+    pub fn from_vec(v: Vector3d<T>) -> Self {
+        Normal3d {
+            x: v.x,
+            y: v.y,
+            z: v.z
+        }
+    }
     pub fn squared_length(&self) -> T {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
@@ -747,6 +754,14 @@ fn test_normal_3d_new() {
     assert_eq!(v.x, 1.0);
     assert_eq!(v.y, 2.0);
     assert_eq!(v.z, 3.0);
+}
+#[test]
+fn test_normal_3d_from_vec() {
+    let v = Vector3d::new(1.0, 2.0, 3.0);
+    let n = Normal3d::from_vec(v);
+    assert_eq!(n.x, 1.0);
+    assert_eq!(n.y, 2.0);
+    assert_eq!(n.z, 3.0);
 }
 #[test]
 fn test_normal_3d_index() {

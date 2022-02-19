@@ -14,4 +14,5 @@ I am writing them primarily to aid my own understanding, but also in the hope th
   - [Bounding Boxes](geometry_bounding_boxes.md)
   - [Transformations](geometry_transformations.md)
   - [Animating Transformations](geometry_animating_transformations.md)
+  - [Interactions](geometry_interactions.md)
 
