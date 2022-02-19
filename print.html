@@ -84,7 +84,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="geometry_and_transformations.html"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="geometry_vectors.html"><strong aria-hidden="true">1.1.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="geometry_points.html"><strong aria-hidden="true">1.2.</strong> Points</a></li><li class="chapter-item expanded "><a href="geometry_normals.html"><strong aria-hidden="true">1.3.</strong> Normals</a></li><li class="chapter-item expanded "><a href="geometry_rays.html"><strong aria-hidden="true">1.4.</strong> Rays</a></li><li class="chapter-item expanded "><a href="geometry_bounding_boxes.html"><strong aria-hidden="true">1.5.</strong> Bounding Boxes</a></li><li class="chapter-item expanded "><a href="geometry_transformations.html"><strong aria-hidden="true">1.6.</strong> Transformations</a></li><li class="chapter-item expanded "><a href="geometry_animating_transformations.html"><strong aria-hidden="true">1.7.</strong> Animating Transformations</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="geometry_and_transformations.html"><strong aria-hidden="true">1.</strong> Geometry and Transformations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="geometry_vectors.html"><strong aria-hidden="true">1.1.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="geometry_points.html"><strong aria-hidden="true">1.2.</strong> Points</a></li><li class="chapter-item expanded "><a href="geometry_normals.html"><strong aria-hidden="true">1.3.</strong> Normals</a></li><li class="chapter-item expanded "><a href="geometry_rays.html"><strong aria-hidden="true">1.4.</strong> Rays</a></li><li class="chapter-item expanded "><a href="geometry_bounding_boxes.html"><strong aria-hidden="true">1.5.</strong> Bounding Boxes</a></li><li class="chapter-item expanded "><a href="geometry_transformations.html"><strong aria-hidden="true">1.6.</strong> Transformations</a></li><li class="chapter-item expanded "><a href="geometry_animating_transformations.html"><strong aria-hidden="true">1.7.</strong> Animating Transformations</a></li><li class="chapter-item expanded "><a href="geometry_interactions.html"><strong aria-hidden="true">1.8.</strong> Interactions</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -2095,6 +2095,171 @@ The final code for interpolating between transformations is shown below. It incl
         let rotation = self.rotations[0].slerp(&amp;self.rotations[1], t);
         let interpolated = &amp;(&amp;translation * rotation.to_transform()) * Transform::new(scale, scale.inverse());
         return interpolated;
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="geometry-and-transformations-8"><a class="header" href="#geometry-and-transformations-8">Geometry and Transformations</a></h1>
+<h2 id="18-interactions"><a class="header" href="#18-interactions">1.8 Interactions</a></h2>
+<p>Our ray tracer needs a way to represent information about points on 2D surfaces, which it will use in shading calculations.</p>
+<p>In <code>pbrt</code>, this is achieved with the <code>Interaction</code> class, which defines the common data and methods for different kinds of interactions. Rust does not have a means for describing shared data for polymorphic types, so to achieve this, we provide two traits -- one with getters for the shared data elements, and one describing the shared methods.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait InteractionData&lt;T: Scalar&gt; {
+    //Location of this interaction
+    fn point(&amp;self) -&gt; Point3d&lt;T&gt;;
+    //Time of the interaction
+    fn time(&amp;self) -&gt; T;
+    //Floating point error                           
+    fn p_error(&amp;self) -&gt; Vector3d&lt;T&gt;;
+    //Negative direction of ray intersection
+    fn wo(&amp;self) -&gt; Vector3d&lt;T&gt;;
+    //Surface normal at this point, if this is an interaction with a surface
+    fn n(&amp;self) -&gt; Option&lt;Normal3d&lt;T&gt;&gt; {
+        None
+    }
+    //Flag representing whether or not this is a surface interaction
+    fn is_surface_interaction(&amp;self) -&gt; bool {
+        return self.n().is_some();
+    }
+    //Scattering medium at this point, if any
+    fn medium_interface(&amp;self) -&gt; Option&lt;&amp;dyn MediumInterface&gt;;
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>The <code>InteractionMethods</code> trait defines several methods for spawning rays as follows:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait InteractionMethods&lt;T: Scalar&gt;: InteractionData&lt;T&gt; {
+    fn spawn_ray(&amp;self, direction: Vector3d&lt;T&gt;) -&gt; Ray&lt;T&gt; {
+        Ray::new(self.point(), direction, T::inf(), self.time())
+    }
+    fn spawn_ray_to_point(&amp;self, point: Point3d&lt;T&gt;) -&gt; Ray&lt;T&gt; {
+        Ray::new(self.point(), point - self.point(), T::inf(), self.time())
+    }
+    fn spawn_ray_to_interaction(&amp;self, other: &amp;dyn InteractionMethods&lt;T&gt;) -&gt; Ray&lt;T&gt; {
+        Ray::new(self.point(), other.point() - self.point(), T::inf(), self.time())
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="181-surface-interactions"><a class="header" href="#181-surface-interactions">1.8.1 Surface Interactions</a></h2>
+<p>The geometry of a particular point on a surface (often a position found by intersecting a ray against the surface) is represented by a <code>SurfaceInteraction</code>. Having this abstraction lets most of the system work with points on surfaces without needing to consider the particular type of geometric shape the points lie on; the SurfaceInteraction abstraction supplies enough information about the surface point to allow the shading and geometric operations in the rest of pbrt to be implemented generically. </p>
+<p>The <code>SurfaceInteraction</code> struct is defined as follows:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct SurfaceInteraction&lt;T: Scalar&gt; {
+    pub point: Point3d&lt;T&gt;,
+    pub time: T,
+    pub p_error: Vector3d&lt;T&gt;,
+    pub wo: Vector3d&lt;T&gt;,
+    pub n: Normal3d&lt;T&gt;,
+    pub uv: Vector2d&lt;T&gt;,
+    pub dp_du: Vector3d&lt;T&gt;,
+    pub dp_dv: Vector3d&lt;T&gt;,
+    pub dn_du: Normal3d&lt;T&gt;,
+    pub dn_dv: Normal3d&lt;T&gt;,
+    pub shading: Shading&lt;T&gt;,
+    pub shape: Option&lt;Box&lt;dyn Shape&lt;T&gt;&gt;&gt;,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>The first five fields correspond to those referred to in the <code>InteractionData</code> trait; getters are defined for these as part of the <code>InteractionData</code> <code>impl</code> block for <code>SurfaceInteraction</code>. The struct additionally stores <code>uv</code>, a 2d vector which provides a parameterized representation of the surface. The vectors <code>dp_du</code> and <code>dp_dv</code> represent the partial derivatives of the surface: \(\partial{p}/\partial{u}\) and \(\partial{p}/\partial{v}\). This allows us to represent the curvature of the surface.</p>
+<p align="center">
+    <img src="images/local_differential_geometry.svg" style="background-color: white" width="200">
+</p>
+<p><em>Figure 1: Local Differential Geometry around a point \(p\)</em></p>
+<p>The cross product of these partial derivatives gives us the surface normal as we move along the surface.</p>
+<p>The <code>SurfaceInteraction</code> struct also stores a reference to the <code>Shape</code> it takes place on. Additionally, stores a second instance of a surface normal and the various partial derivatives to represent possibly perturbed values of these quantities as can be generated by bump mapping or interpolated per-vertex normals with triangles. Some parts of the system use this shading geometry, while others need to work with the original quantities. This is represented in a separate trait, the <code>Shading</code> trait. The <code>SurfaceInteraction</code> has an instance of <code>Shading</code> which is initialized at creation time and can be updated via the <code>set_shading_geometry</code> method.</p>
+<p>The <code>SurfaceInteraction</code> <code>new()</code> constructor takes all of the above parameters as input, and computes the normal using the partial derivatives. It additionally reverses the direction of the normal in one of two situations:</p>
+<ul>
+<li>If the <code>Shape</code> that the interaction takes place on has a <code>reverse_orientation</code> flag set to <code>true</code></li>
+<li>If the <code>Shape</code>'s transformation matrix has switched the handedness of the object coordinate system from pbrt’s default left-handed coordinate system to a right-handed one</li>
+</ul>
+<p>If <em>both</em> of the above conditions is true, we need the effects to cancel each other out, so an XOR (<code>^</code>) condition is used.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; SurfaceInteraction&lt;T&gt; {
+    pub fn new(
+        point: Point3d&lt;T&gt;, 
+        time: T, 
+        p_error: Vector3d&lt;T&gt;, 
+        wo: Vector3d&lt;T&gt;, 
+        uv: Vector2d&lt;T&gt;, 
+        dp_du: Vector3d&lt;T&gt;, 
+        dp_dv: Vector3d&lt;T&gt;, 
+        dn_du: Normal3d&lt;T&gt;,
+        dn_dv: Normal3d&lt;T&gt;,
+        shape: Option&lt;Box&lt;dyn Shape&lt;T&gt;&gt;&gt;,
+    ) -&gt; Self {
+            // Compute surface normal using partial derivatives
+            let n = Normal3d::from_vec(dp_du.cross(&amp;dp_dv).normalized());
+            // Invert the normal based on properties of the shape
+            let adjusted_normal = if shape.is_some() {
+                if (shape.as_ref().unwrap().transform_swaps_handedness()) 
+                ^ (shape.as_ref().unwrap().reverse_orientation()) {
+                    -n
+                } else {
+                    n
+                }
+            } else {
+                n
+            };
+            SurfaceInteraction {
+                point,
+                time,
+                p_error,
+                wo,
+                n: adjusted_normal,
+                uv,
+                dp_du,
+                dp_dv,
+                dn_du,
+                dn_dv,
+                shading: Shading {
+                    n,
+                    dp_du,
+                    dp_dv,
+                    dn_du,
+                    dn_dv
+                },
+                shape
+        }
+    }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Finally, we need a way of applying a transform to a <code>SurfaceInteraction</code>. For the most part, members are either transformed directly or copied, as appropriate, but given the approach that pbrt uses for bounding floating-point error in computed intersection points, transforming the p and pError member variables requires special care. The fragment that handles this, is defined in a later section (TODO: update!), when floating-point rounding error is discussed. </p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl&lt;T: Scalar&gt; Mul&lt;SurfaceInteraction&lt;T&gt;&gt; for Transform&lt;T&gt; {
+    type Output = SurfaceInteraction&lt;T&gt;;
+    fn mul(self, other: SurfaceInteraction&lt;T&gt;) -&gt; Self::Output {
+        SurfaceInteraction {
+            point: &amp;self * other.point,
+            time: other.time,
+            p_error: &amp;self * other.p_error,
+            wo: &amp;self * other.wo,
+            n: &amp;self * other.n,
+            uv: other.uv,
+            dp_du: &amp;self * other.dp_du,
+            dp_dv: &amp;self * other.dp_dv,
+            dn_du: &amp;self * other.dn_du,
+            dn_dv: &amp;self * other.dn_dv,
+            shading: Shading {
+                n: &amp;self * other.shading.n,
+                dp_du: &amp;self * other.shading.dp_du,
+                dp_dv: &amp;self * other.shading.dp_dv,
+                dn_du: &amp;self * other.shading.dn_du,
+                dn_dv: &amp;self * other.shading.dn_dv
+            },
+            shape: other.shape
+        }
     }
 }
 <span class="boring">}

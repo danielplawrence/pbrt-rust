@@ -7,6 +7,7 @@ pub mod ray;
 pub mod bounds;
 pub mod transform;
 pub mod quaternion;
+pub mod interactions;
 
 /// Describes the shared behavior of scalar types in the geometry module.
 /// This allows us to define generic Vector and Point types which can support
